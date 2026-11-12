@@ -22,6 +22,7 @@ enum Snapshot {
         static let settings = "--settings"
         static let icon = "--icon"
         static let release = "--release"
+        static let releaseSheet = "--release-sheet"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -53,6 +54,7 @@ enum Snapshot {
         } else {
             let scene: Demo.Scene = arguments.contains(Argument.installed) ? .installed
                 : arguments.contains(Argument.tested) ? .tested
+                : arguments.contains(Argument.releaseSheet) ? .releaseAction
                 : arguments.contains(Argument.release) ? .release : .building
             return await Demo.app(showing: scene)
         }
@@ -88,7 +90,9 @@ enum Snapshot {
         // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
         // content; the main window in a titled one of the requested size.
         let content: NSView
-        if arguments.contains(Argument.settings) {
+        if arguments.contains(Argument.releaseSheet), let action = model.release?.activeAction {
+            content = NSHostingView(rootView: ReleaseActionSheet(model: action) {}.background(.background))
+        } else if arguments.contains(Argument.settings) {
             content = NSHostingView(rootView: SettingsView(app: model).background(.background))
         } else if arguments.contains(Argument.menu) {
             content = NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))

@@ -22,6 +22,9 @@ public enum Layout {
     static let trendHeight: CGFloat = 64
     static let setMarkerSize: CGFloat = 6
     static let releaseCardMinWidth: CGFloat = 170
+    public static let releaseSheetWidth: CGFloat = 520
+    static let notesEditorHeight: CGFloat = 90
+    static let planNotesHeight: CGFloat = 150
     /// Characters of a commit shown to people.
     static let shortCommitLength = 7
     /// Builds shown in the build-time trend, and runs listed under it.
@@ -65,6 +68,9 @@ public enum AccessibilityID {
     public static let runAllButton = "run-all-button"
     public static let releaseView = "release-view"
     public static let modePicker = "mode-picker"
+    public static let releaseSheet = "release-sheet"
+    public static let newTestBuild = "new-test-build"
+    public static let releaseConfirm = "release-confirm"
     public static let scheduleToggle = "schedule-toggle"
     public static let history = "history"
     public static let cleanButton = "clean-button"

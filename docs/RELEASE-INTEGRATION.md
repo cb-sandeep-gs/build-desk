@@ -1,7 +1,7 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Steps R0 and R1 are built; R2 to R4 are not. The contract itself is described for providers in
+Written 2026-11-13. Steps R0, R1 and R2 are built; R3 and R4 are not. The contract itself is described for providers in
 [release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
@@ -86,7 +86,7 @@ the action in full ("Create tag and push"). Nothing is run from a preview.
 |---|---|---|
 | R0 Contract (done 2026-11-13) | The contract and its schema; the `release` section of `.builddesk.json`; a provider for the first project that prints status, plan and run as JSON | Both repositories |
 | R1 Read-only Release mode (done 2026-11-13) | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
-| R2 Tagging | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
+| R2 Tagging (done 2026-11-13) | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
 | R3 Store | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
 | R4 Build Desk extras | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
 
@@ -121,6 +121,18 @@ command-line status command; one was added there.
 Tried with the first provider: two apps, their four tracks and sixty recent builds were shown from its real data.
 
 A build's full notes and its commits are not shown yet: the contract has no command for one build's details.
+
+## What R2 built
+
+| Part | Where | What it does |
+|---|---|---|
+| Action | `ReleaseActionModel`, `ReleaseModel.begin` | Holds what the person chose (track, branch, written notes, or the shipped build), the plan the project answered with, and the run. Any change to the inputs throws the plan away, so a plan is only ever confirmed for exactly what it was made for. |
+| Sheet | `ReleaseActionSheet` | New Test Build and Store Release each open a sheet: choose, press Preview, read "what will happen" with its warnings and notes, then press a button that names what it will create. A track whose notes are written by hand shows an editor and refuses a preview without notes. |
+| After | `ReleaseModel.endAction` | A refused run (for example, the code moved) shows the provider's words and asks for a new preview. After a run that happened, the status is read again to show the new build. |
+
+The run path was not tried against the first provider, on purpose: it pushes a tag and starts a cloud build. It is
+covered by tests on both sides (a fake provider here, a recorded script runner there). The preview path was tried
+for real in R0.
 
 ## The first provider
 

@@ -56,6 +56,8 @@ public enum Demo {
         case tested
         /// Release mode.
         case release
+        /// A release action with its plan on screen, waiting for the confirmation.
+        case releaseAction
     }
 
     /// An app model showing the demo project in the given scene.
@@ -100,6 +102,11 @@ public enum Demo {
             app.mode = .release
             await app.release?.refresh()
             app.release?.selectedBuildID = "HarborInternal-4.2.3"
+        case .releaseAction:
+            app.mode = .release
+            await app.release?.refresh()
+            app.release?.begin(.testflight)
+            await app.release?.activeAction?.preview()
         }
         // Let the scripted events arrive.
         try? await Task.sleep(for: .milliseconds(200))

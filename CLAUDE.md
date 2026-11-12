@@ -86,6 +86,7 @@ and dark:
 .build/debug/BuildDeskApp --snapshot tests.png --tested     # test results
 .build/debug/BuildDeskApp --snapshot prefs.png --settings   # the Settings window
 .build/debug/BuildDeskApp --snapshot rel.png --release      # Release mode
+.build/debug/BuildDeskApp --snapshot act.png --release-sheet  # a release action with its plan
 ```
 
 ## Testing against a real project

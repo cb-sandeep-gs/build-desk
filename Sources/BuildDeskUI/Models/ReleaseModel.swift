@@ -26,6 +26,8 @@ public final class ReleaseModel {
     public var selectedAppID: String?
     /// The build whose details are open; nil when none is.
     public var selectedBuildID: String?
+    /// The release action in progress, shown as a sheet; nil when none is.
+    public internal(set) var activeAction: ReleaseActionModel?
 
     private let client: any ReleaseProviding
 
@@ -65,6 +67,19 @@ public final class ReleaseModel {
         } catch {
             state = .failed(userMessage(for: error))
         }
+    }
+
+    /// Starts a release action for the selected app. Nothing happens until its plan is confirmed.
+    public func begin(_ kind: ReleaseAction.Kind) {
+        guard canAct, activeAction == nil, let app = selectedApp, let status else { return }
+        activeAction = ReleaseActionModel(kind: kind, app: app, status: status, provider: provider, client: client)
+    }
+
+    /// Closes the action. After one that ran, the status is read again to show the new build.
+    public func endAction() async {
+        let ran = activeAction?.isDone == true
+        activeAction = nil
+        if ran { await refresh() }
     }
 
     /// The track's name for a build of the selected app; "Store" for a store build.

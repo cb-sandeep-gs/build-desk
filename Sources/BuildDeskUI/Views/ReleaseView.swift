@@ -30,6 +30,14 @@ struct ReleaseView: View {
                 }
             }
         }
+        .sheet(isPresented: Binding(
+            get: { release.activeAction != nil },
+            set: { isShown in if !isShown { Task { await release.endAction() } } }
+        )) {
+            if let action = release.activeAction {
+                ReleaseActionSheet(model: action) { Task { await release.endAction() } }
+            }
+        }
         // The first look at Release mode reads the status; later looks keep what is there.
         .task { if release.status == nil { await release.refresh() } }
         .accessibilityIdentifier(AccessibilityID.releaseView)
@@ -41,6 +49,7 @@ struct ReleaseView: View {
                 header(status)
                 if let app = release.selectedApp {
                     cards(app)
+                    if release.canAct { actions(app) }
                     builds
                 }
             }
@@ -73,6 +82,21 @@ struct ReleaseView: View {
             }
             if release.isRefreshing { ProgressView().controlSize(.small) }
         }
+    }
+
+    /// Each button opens a sheet that previews the action; nothing is done from here.
+    private func actions(_ app: ReleaseApp) -> some View {
+        HStack(spacing: Layout.spacing) {
+            Button("New Test Build…", systemImage: "paperplane") { release.begin(.testflight) }
+                .buttonStyle(.borderedProminent)
+                .disabled(app.tracks.isEmpty)
+                .accessibilityIdentifier(AccessibilityID.newTestBuild)
+            Button("Store Release…", systemImage: "bag") { release.begin(.store) }
+                .disabled(!release.builds.contains { $0.kind == .testflight })
+                .help("Mark the test build that was shipped as the store release")
+            Spacer()
+        }
+        .controlSize(.large)
     }
 
     /// "develop @ a41c9e2 · local changes"
