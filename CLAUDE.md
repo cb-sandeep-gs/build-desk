@@ -90,8 +90,8 @@ and dark:
   user's real devices alone.
 
 ## App bundle hygiene
-- The shipped `.app` contains only the binary and its resources: no docs, markdown, scripts, fixtures or agent
-  config.
+- The shipped `.app` contains only the binary, the icon and Info.plist: no docs, markdown, scripts, fixtures or
+  agent config. The CI workflow counts the files in the bundle; update that count when a real resource is added.
 
 ## Git
 - Conventional Commits (`feat(core): …`), with a short bullet body for key changes.

@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    # macOS: the package targets macOS 14+ and the app uses AppKit, SwiftUI and Charts.
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          swift --version
+          # Annotations are readable without access to the job log: record the toolchain there too.
+          echo "::notice title=Toolchain::$(swift --version 2>&1 | head -1)"
+
+      - name: Lint
+        run: |
+          brew list swiftlint >/dev/null 2>&1 || brew install swiftlint
+          swiftlint lint --strict
+
+      - name: Scripts
+        run: |
+          for script in Scripts/*.sh; do bash -n "$script"; done
+
+      - name: Build
+        run: |
+          # On failure, surface the compiler errors as annotations so they are readable without log access.
+          set -o pipefail
+          if ! swift build --build-tests 2>&1 | tee build.log; then
+            grep -E "error:" build.log | head -20 | while IFS= read -r line; do echo "::error title=Build::${line}"; done
+            exit 1
+          fi
+
+      - name: Test
+        # The tests use fakes and made-up fixtures: no Xcode project, device or simulator is needed.
+        run: swift test
+
+      - name: CLI smoke test
+        run: |
+          swift run builddesk
+          swift run builddesk devices --json >/dev/null
+
+      - name: App bundle
+        run: |
+          ./Scripts/build-app.sh debug
+          # Only the binary, the icon and Info.plist may be in the bundle.
+          test "$(find .build/BuildDesk.app -type f | wc -l | tr -d ' ')" = "4"

@@ -20,6 +20,7 @@ enum Snapshot {
         static let sheet = "--sheet"
         static let tested = "--tested"
         static let settings = "--settings"
+        static let icon = "--icon"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -47,6 +48,23 @@ enum Snapshot {
             let scene: Demo.Scene = arguments.contains(Argument.installed) ? .installed
                 : arguments.contains(Argument.tested) ? .tested : .building
             return await Demo.app(showing: scene)
+        }
+    }
+
+    /// Writes the app icon as a PNG at its full size: `BuildDeskApp --icon out.png`.
+    static func renderIcon(arguments: [String]) -> Int32 {
+        guard let output = value(after: Argument.icon, in: arguments) else { return EXIT_FAILURE }
+        let renderer = ImageRenderer(content: AppIconView())
+        // One pixel per point, so the file is exactly the canvas size whatever the screen is.
+        renderer.scale = 1
+        guard let image = renderer.cgImage,
+              let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { return EXIT_FAILURE }
+        do {
+            try png.write(to: URL(fileURLWithPath: output))
+            return EXIT_SUCCESS
+        } catch {
+            FileHandle.standardError.write(Data("Couldn't write \(output): \(error.localizedDescription)\n".utf8))
+            return EXIT_FAILURE
         }
     }
 

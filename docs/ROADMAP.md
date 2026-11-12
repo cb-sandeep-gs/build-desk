@@ -1,7 +1,7 @@
 # Build Desk — roadmap
 
 What is left to finish, what to build next, and where the tool could go. Written 2026-11-13, after phases BD-0 to
-BD-5. BD-6 to BD-9 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
+BD-5. BD-6 to BD-9 and part of BD-11 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
 
 ## Where it stands
 
@@ -49,8 +49,7 @@ These paths are covered by tests against fakes only.
 | Console shows standard output only | `os_log` and `Logger` output is missing. | Needs research; see section 4. |
 | First build of a scheme has no measured progress | A busy bar until one build has finished. | Estimate from the number of source files, or from another configuration's count. |
 | An iOS version newer than Xcode supports is not detected | The build fails with Xcode's own message. | Compare the device's version with the installed Xcode's device support. |
-| No app icon | The app shows the generic icon in the Dock and Finder. | Add an icon set to the bundle script. |
-| No checks on push | Tests and lint run only when someone runs them. | A GitHub Actions workflow: `swift build`, `swift test`, `swiftlint lint --strict`. |
+| The push checks have not run yet | The workflow is written but only runs once it is pushed; the hosted Mac may have an older Swift than the one used so far. | Push, read the first run, fix what it finds. |
 
 ## 2. Next phases
 
@@ -59,7 +58,7 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 | Phase | What it adds | Size | Depends on |
 |---|---|---|---|
 | BD-10 Device tools | Screenshot, crash logs, app data folder, unified logs | L | Research |
-| BD-11 Distribution | Auto-update, app icon, checks on push | M | First signed release |
+| BD-11 Distribution (rest) | Check for a newer release and offer to install it; a release workflow on a tagged commit | S | First signed release, and a decision on a dependency |
 
 ### BD-10 Device tools
 
@@ -71,8 +70,8 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 
 - Check for a newer release and offer to install it. Needs a decision on adding a dependency (Sparkle) or writing
   a small updater against GitHub releases.
-- App icon.
-- Checks on push and a release workflow that runs `Scripts/release.sh` on a tagged commit.
+- A release workflow that runs `Scripts/release.sh` on a tagged commit. It needs the signing certificate and the
+  notarization credentials stored as repository secrets.
 
 ### Follow-ups to what is built
 

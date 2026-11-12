@@ -38,6 +38,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-11 Distribution (part) | App icon and checks on every push. Auto-update is still open. | Done 2026-11-13 |
 | BD-9 Build queue | Run every pin one after another with one notification; build the pins once a day. | Done 2026-11-13 |
 | BD-8 Run tests | Run a scheme's tests, or one class or test, with results per test and a re-run of the failed ones. | Done 2026-11-13 |
 | BD-7 Launch options | Arguments, environment variables and a link for the launch, per scheme and per pin. | Done 2026-11-13 |
@@ -106,6 +107,15 @@ now stops whatever it was running, so no build or console session is left behind
 
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
+## What BD-11 built so far
+
+| Part | Files | What it does |
+|---|---|---|
+| App icon | `AppIconView`, `Scripts/make-icon.sh`, `Resources/AppIcon.icns` | The icon is drawn in code. The script renders it (`BuildDeskApp --icon`) and builds the `.icns`, which is checked in, so building the app needs no extra step. `Scripts/build-app.sh` puts it in the bundle. |
+| Checks on push | `.github/workflows/ci.yml` | On every pull request and on pushes to `main` and `develop`: lint, script syntax, build, tests, a command-line smoke test and a check that the app bundle holds only its binary, icon and Info.plist. Written to match the sibling tool's workflow; it has not run yet, because it runs only once pushed. |
+
+Still open in BD-11: checking for a newer release and offering to install it (see ROADMAP.md).
 
 ## What BD-9 built
 

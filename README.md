@@ -166,6 +166,12 @@ All logic is in `Sources/BuildDeskCore`. The command-line tool (`Sources/buildde
 it. Tests use fakes and made-up fixtures, so they need no Xcode project and no device. Working rules are in
 [CLAUDE.md](CLAUDE.md).
 
+Every pull request, and every push to `main` or `develop`, runs the same checks on GitHub
+(`.github/workflows/ci.yml`).
+
+The app icon is drawn in code (`AppIconView`). After changing it, run `./Scripts/make-icon.sh` and commit the
+new `Resources/AppIcon.icns`.
+
 To check the window without opening it, render it to an image:
 
 ```bash
