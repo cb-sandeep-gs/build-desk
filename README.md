@@ -8,7 +8,8 @@ must be installed but never needs to be running. Signing uses the Apple account 
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
 window (BD-2), the menu bar item (BD-3), the extras (BD-4) and what a team needs to share it (BD-5: project
-settings file, device checks, release script). See [docs/PLAN.md](docs/PLAN.md).
+settings file, device checks, release script). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
+is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Use the app
 

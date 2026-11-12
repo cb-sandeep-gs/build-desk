@@ -4,6 +4,8 @@ A small Mac app that builds any scheme of an Xcode project, installs it on a con
 without opening Xcode. Xcode must be installed (Build Desk drives `xcodebuild`, `devicectl` and `simctl`), but it
 never needs to be running.
 
+What comes next (remaining work, next phases, larger directions) is in [ROADMAP.md](ROADMAP.md).
+
 ## What the app shows
 
 - **Schemes**, grouped by what can be done with them: apps (build, install, launch), extensions (shown under the
