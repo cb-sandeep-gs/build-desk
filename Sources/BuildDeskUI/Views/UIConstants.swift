@@ -1,0 +1,134 @@
+import BuildDeskCore
+import SwiftUI
+
+/// Sizes and spacing used across the window.
+public enum Layout {
+    public static let windowDefaultWidth: CGFloat = 1060
+    public static let windowDefaultHeight: CGFloat = 720
+    public static let windowMinWidth: CGFloat = 760
+    public static let windowMinHeight: CGFloat = 480
+
+    static let sidebarMinWidth: CGFloat = 210
+    static let sidebarIdealWidth: CGFloat = 250
+    static let sidebarMaxWidth: CGFloat = 360
+    /// The detail column stops growing here, so lines stay readable on a wide window.
+    static let detailMaxWidth: CGFloat = 820
+    static let welcomeWidth: CGFloat = 420
+
+    static let spacingSmall: CGFloat = 6
+    static let spacing: CGFloat = 12
+    static let spacingLarge: CGFloat = 20
+    static let cornerRadius: CGFloat = 8
+    static let iconColumnWidth: CGFloat = 18
+    static let pickerLabelWidth: CGFloat = 96
+    static let heroIconSize: CGFloat = 56
+    /// Warnings shown before the list asks to be expanded; a large project has hundreds.
+    static let diagnosticsShownAtOnce = 50
+}
+
+/// Identifiers for UI tests and accessibility tools.
+public enum AccessibilityID {
+    public static let openProject = "open-project"
+    public static let schemeList = "scheme-list"
+    public static let devicePicker = "device-picker"
+    public static let configurationPicker = "configuration-picker"
+    public static let runButton = "run-button"
+    public static let buildOnlyButton = "build-only-button"
+    public static let stopButton = "stop-button"
+    public static let launchToggle = "launch-toggle"
+    public static let runStatus = "run-status"
+}
+
+extension SchemeKind {
+    var label: String {
+        switch self {
+        case .app: "App"
+        case .appExtension: "Extension"
+        case .framework: "Framework"
+        case .tests: "Tests"
+        case .other: "Scheme"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .app: "app.badge"
+        case .appExtension: "puzzlepiece.extension"
+        case .framework: "shippingbox"
+        case .tests: "checkmark.diamond"
+        case .other: "square.dashed"
+        }
+    }
+}
+
+extension ProductKind {
+    var label: String {
+        switch self {
+        case .application: "Application"
+        case .watchApplication: "Watch app"
+        case .appExtension: "App extension"
+        case .framework: "Framework"
+        case .library: "Library"
+        case .unitTests: "Tests"
+        case .uiTests: "UI tests"
+        case .other: "Other"
+        }
+    }
+}
+
+extension Platform {
+    var symbol: String {
+        switch self {
+        case .iOS: "iphone"
+        case .watchOS: "applewatch"
+        case .tvOS: "appletv"
+        case .visionOS: "visionpro"
+        case .macOS: "macbook"
+        }
+    }
+}
+
+extension Device {
+    /// "iOS 27.2 · wired", "iOS 27.2 · simulator" or "iOS 27.2 · not connected".
+    var detail: String {
+        let state = switch (kind, isReady, connection) {
+        case (.simulator, _, _): isBooted ? "simulator, booted" : "simulator"
+        case (.physical, false, _): "not connected"
+        case (.physical, true, .wired): "wired"
+        case (.physical, true, _): "Wi-Fi"
+        }
+        return "\(platform) \(osVersion) · \(state)"
+    }
+
+    var symbol: String { platformKind?.symbol ?? "iphone" }
+}
+
+/// Short durations for people: "8 s", "3 m 20 s".
+public enum DurationText {
+    private static let secondsPerMinute = 60
+
+    public static func short(_ seconds: Double) -> String {
+        let total = Int(seconds.rounded())
+        guard total >= secondsPerMinute else { return "\(total) s" }
+        return "\(total / secondsPerMinute) m \(total % secondsPerMinute) s"
+    }
+}
+
+/// A small rounded label, used for a scheme's kind and platform.
+struct Badge: View {
+    let text: String
+    var symbol: String?
+
+    var body: some View {
+        Label {
+            Text(text)
+        } icon: {
+            if let symbol { Image(systemName: symbol) }
+        }
+        .labelStyle(.titleAndIcon)
+        .font(.caption)
+        .padding(.horizontal, Layout.spacingSmall + 2)
+        .padding(.vertical, 2)
+        .background(.quaternary, in: Capsule())
+    }
+}

@@ -6,13 +6,32 @@ Xcode.
 Build Desk drives the command-line tools that ship inside Xcode (`xcodebuild`, `devicectl`, `simctl`), so Xcode
 must be installed but never needs to be running. Signing uses the Apple account already saved in Xcode.
 
-**Status:** the core library and the `builddesk` command-line tool work (BD-1). The Mac app comes in BD-2. See
-[docs/PLAN.md](docs/PLAN.md).
+**Status:** the Mac app's main window works (BD-2), on top of the core library and the `builddesk` command-line
+tool (BD-1). The menu bar item comes in BD-3. See [docs/PLAN.md](docs/PLAN.md).
 
-## Use the command-line tool
+## Use the app
 
 Requirements: macOS 14 or later with Xcode installed, a device that has been paired with this Mac once, and Xcode
 closed while a build runs.
+
+```bash
+./Scripts/build-app.sh
+```
+
+```bash
+open .build/BuildDesk.app
+```
+
+1. Choose **Open Project…** and pick a `.xcodeproj`, a `.xcworkspace`, or the folder that contains one (a
+   repository checkout works). You can also drop it on the window.
+2. Pick a scheme in the list. Schemes are grouped as Apps, Extensions, Frameworks and Tests.
+3. Pick a device and a configuration. Only devices that fit the scheme's platform are offered.
+4. Press **Build and Install** (⌘R). **Build Only** (⌘B) compiles without installing; **Stop** (⌘.) ends a run.
+
+The app is ad-hoc signed for local use. The first time you open a copy built on another Mac, macOS asks you to
+confirm it in System Settings.
+
+## Use the command-line tool
 
 ```bash
 swift build -c release
@@ -48,9 +67,19 @@ The full output of each run is kept in `~/Library/Logs/BuildDesk` (the newest 20
 swift build && swift test && swiftlint lint --strict
 ```
 
-All logic is in `Sources/BuildDeskCore`; the command-line tool in `Sources/builddesk` is a thin layer over it.
-Tests use a fake tool runner and made-up fixtures, so they need no Xcode project and no device. Working rules are
-in [CLAUDE.md](CLAUDE.md).
+All logic is in `Sources/BuildDeskCore`. The command-line tool (`Sources/builddesk`) and the app
+(`Sources/BuildDeskUI` for view models and views, `Sources/BuildDeskApp` for the entry point) are thin layers over
+it. Tests use fakes and made-up fixtures, so they need no Xcode project and no device. Working rules are in
+[CLAUDE.md](CLAUDE.md).
+
+To check the window without opening it, render it to an image:
+
+```bash
+.build/debug/BuildDeskApp --snapshot window.png
+```
+
+This shows a made-up demo project with a build in progress. Add `--dark`, `--width <points>`, `--height <points>`,
+`--welcome` for the welcome screen, or `--project <path>` for a real project.
 
 ## The phase 0 proof script
 

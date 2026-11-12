@@ -67,12 +67,15 @@ public enum ProductKind: String, Sendable, Codable, CaseIterable {
 public struct ProjectTarget: Sendable, Equatable, Codable, Identifiable {
     public let name: String
     public let kind: ProductKind
+    /// Nil when the project file does not say which SDK the target builds with.
+    public let platform: Platform?
 
     public var id: String { name }
 
-    public init(name: String, kind: ProductKind) {
+    public init(name: String, kind: ProductKind, platform: Platform? = nil) {
         self.name = name
         self.kind = kind
+        self.platform = platform
     }
 }
 
@@ -134,8 +137,15 @@ public struct Scheme: Sendable, Equatable, Codable, Identifiable {
         self.kind = Self.kind(buildTargets: buildTargets, testTargets: testTargets, runnable: runnable)
     }
 
-    /// True when Build Desk can install what this scheme builds.
-    public var isInstallable: Bool { kind == .app }
+    /// True when Build Desk can install what this scheme builds: an app, or an extension whose
+    /// scheme also builds the app it ships in (as Xcode does when an extension scheme is run).
+    public var isInstallable: Bool {
+        switch kind {
+        case .app: true
+        case .appExtension: buildTargets.contains { $0.kind == .application }
+        case .framework, .tests, .other: false
+        }
+    }
 
     /// The first build target decides: an extension scheme also builds its host app, but lists
     /// the extension first.

@@ -6,8 +6,9 @@ Plan and phase status: [docs/PLAN.md](docs/PLAN.md). Work one phase (BD-n) at a 
 and docs.
 
 ## Architecture
-- **BuildDeskCore holds all logic.** The CLI and the app (view models + SwiftUI views) stay thin layers over it,
-  so a new front end (menu bar, CLI command, automation) changes little.
+- **BuildDeskCore holds all logic.** The CLI and the app (BuildDeskUI view models + views, BuildDeskApp entry
+  point) stay thin layers over it, so a new front end (menu bar, CLI command, automation) changes little. View
+  models are `@MainActor @Observable`, take their services as protocols, and are tested in BuildDeskUITests.
 - **Clear boundaries:** project reading, device discovery, build running and output parsing are separate types
   behind protocols, so each is testable without Xcode or a device.
 - **Apple tools only through one client.** argv lists only, never a shell string. Parse machine-readable output
@@ -65,7 +66,12 @@ and docs.
 swift build && swift test && swiftlint lint --strict
 bash -n Scripts/*.sh        # when a script changed
 ```
-No new warnings. When UI changed, build the app and check the window at its default and minimum sizes.
+No new warnings. When UI changed, render the window and look at it, at the default and the minimum size, light
+and dark:
+```bash
+.build/debug/BuildDeskApp --snapshot window.png
+.build/debug/BuildDeskApp --snapshot small-dark.png --dark --width 760 --height 480
+```
 
 ## Testing against a real project
 - Each device build of a large app is several GB. Measure first (`du -sh`, `df -h`).

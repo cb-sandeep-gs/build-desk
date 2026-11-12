@@ -34,7 +34,7 @@ output (`-json`, `--json-output`) only.
 |---|---|---|
 | BD-0 Proof | `Scripts/phase0-proof.sh` builds, installs and launches a scheme on a real device with Xcode closed. | Done 2026-11-12 |
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
-| BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live log. | Not started |
+| BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Not started |
 | BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Not started |
 
@@ -53,16 +53,35 @@ Checked on the Mercury iOS project (19 scheme files, 16 targets): the scheme lis
 `xcodebuild -list` took 32 s. A full `builddesk run` on a wired iPhone, from a clean build folder, took 240 s
 (build 225 s, locate 6 s, install 10 s, launch under 1 s) and reported 9,842 build tasks and 657 distinct warnings.
 
-Known gaps, for BD-2:
+## What BD-2 built
 
-- **Platform is not matched yet.** A watchOS or tvOS scheme is listed as an app, and every simulator is listed
-  for every scheme. Read each target's platform (`SDKROOT`) and offer only devices that fit.
-- **A test scheme that also has a Run action** (it runs the host app) is listed as an app.
-- **Workspace groups:** project references nested in workspace groups with their own paths are not followed.
+`BuildDeskUI` (view models and SwiftUI views) and `BuildDeskApp` (the app entry point), bundled by
+`Scripts/build-app.sh`.
+
+| Part | Types | What it does |
+|---|---|---|
+| App state | `AppModel`, `PreferenceStore` | Opens a project, workspace or the folder that holds one; remembers recent projects, the last scheme, configuration and device. |
+| Scheme list | `ProjectModel`, `SchemeListView` | Schemes grouped as Apps, Extensions, Frameworks, Tests; filter field; package schemes loaded on request because that listing is slow. |
+| Scheme detail | `SchemeDetailView` | Device and configuration pickers, targets, Build and Install, Build Only, Stop, Launch after install; says why a run cannot start. |
+| Run | `RunModel`, `RunProgressView` | Step strip, elapsed time, progress measured against the last build of the same scheme, errors and warnings with `file:line`, link to the full log. |
+| Devices | `DeviceListModel` | Refreshed every 5 s while the window is open; only devices whose platform fits the scheme are offered. |
+| Checks | `Snapshot`, `Demo` | `BuildDeskApp --snapshot out.png` renders the window off screen at any size, light or dark, with a made-up demo project or a real one. |
+
+Core additions: each target's platform (from `SDKROOT`), `ProjectLocator` (finds the project inside a chosen
+folder), service protocols (`ProjectReading`, `DeviceDiscovering`, `BuildRunning`) so view models are tested with
+fakes, and extension schemes that also build their app count as installable.
+
+Menu keys match Xcode: ⌘R build and install, ⌘B build only, ⌘. stop, ⇧⌘R reload, ⌘O open.
+
+Known gaps:
+
+- **Not clicked through by hand yet.** The window was checked from rendered snapshots (demo and the Mercury
+  project) and the run path is tested with fakes; the same pipeline ran on a real device from the command line.
+  A person still needs to press Build and Install in the window once.
 - **Simulator install and launch** are covered by tests against a fake tool runner, not yet tried on a real simulator.
-- **Build progress has no total.** `xcodebuild` prints tasks as they start but not how many there will be, so
-  the app can show a count and the current target, not a percentage. A remembered count from the last build of
-  the same scheme can give an estimate.
+- **A test scheme that also has a Run action** (it runs the host app) is listed under Apps.
+- **Workspace groups:** project references nested in workspace groups with their own paths are not followed.
+- **Progress on the first build of a scheme** is a busy bar; the measured bar needs one earlier build to compare with.
 
 ## Findings from BD-0
 

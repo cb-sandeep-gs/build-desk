@@ -97,6 +97,8 @@ enum ProjectFileParser {
         static let configurationList = "buildConfigurationList"
         static let configurations = "buildConfigurations"
         static let defaultConfiguration = "defaultConfigurationName"
+        static let buildSettings = "buildSettings"
+        static let sdkRoot = "SDKROOT"
     }
 
     /// `project.pbxproj` is an old-style property list, which Foundation reads directly; reading
@@ -110,12 +112,15 @@ enum ProjectFileParser {
             throw CocoaError(.propertyListReadCorrupt)
         }
 
+        // A target that sets no SDK of its own builds with the project's.
+        let projectPlatform = platform(ofConfigurationsOf: project, in: objects)
         let targetIDs = project[Key.targets] as? [String] ?? []
         let targets: [ProjectTarget] = targetIDs.compactMap { id in
             guard let target = objects[id], let name = target[Key.name] as? String else { return nil }
             // Aggregate and legacy targets have no product type.
             let kind = (target[Key.productType] as? String).map(ProductKind.init(productType:)) ?? .other
-            return ProjectTarget(name: name, kind: kind)
+            let platform = platform(ofConfigurationsOf: target, in: objects) ?? projectPlatform
+            return ProjectTarget(name: name, kind: kind, platform: platform)
         }
 
         let list = (project[Key.configurationList] as? String).flatMap { objects[$0] }
@@ -125,6 +130,19 @@ enum ProjectFileParser {
             configurations: configurationIDs.compactMap { objects[$0]?[Key.name] as? String },
             defaultConfiguration: list?[Key.defaultConfiguration] as? String
         )
+    }
+}
+
+extension ProjectFileParser {
+    /// The SDK named by the build configurations of a project or target object, if any names one.
+    private static func platform(ofConfigurationsOf owner: [String: Any], in objects: [String: [String: Any]]) -> Platform? {
+        let list = (owner[Key.configurationList] as? String).flatMap { objects[$0] }
+        let configurationIDs = list?[Key.configurations] as? [String] ?? []
+        return configurationIDs.lazy
+            .compactMap { objects[$0]?[Key.buildSettings] as? [String: Any] }
+            .compactMap { $0[Key.sdkRoot] as? String }
+            .compactMap(Platform.init(sdkRoot:))
+            .first
     }
 }
 

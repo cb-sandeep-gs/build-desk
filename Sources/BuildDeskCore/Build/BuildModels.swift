@@ -100,5 +100,13 @@ public struct RunSummary: Sendable, Equatable {
     /// The full build output, when logging is on.
     public let logFile: URL?
 
+    public init(product: BuiltProduct?, taskCount: Int, warnings: [Diagnostic], secondsByStep: [PipelineStep: Double], logFile: URL?) {
+        self.product = product
+        self.taskCount = taskCount
+        self.warnings = warnings
+        self.secondsByStep = secondsByStep
+        self.logFile = logFile
+    }
+
     public var totalSeconds: Double { secondsByStep.values.reduce(0, +) }
 }
