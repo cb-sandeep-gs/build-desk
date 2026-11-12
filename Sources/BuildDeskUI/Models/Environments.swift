@@ -23,7 +23,8 @@ extension AppEnvironment {
             history: FileRunHistoryStore.defaultDirectory.map { FileRunHistoryStore(directory: $0) } ?? MemoryRunHistoryStore(),
             buildFolders: BuildFolderService(),
             tester: TestRunner(),
-            deviceTools: DeviceToolsService()
+            deviceTools: DeviceToolsService(),
+            releases: ReleaseClient()
         )
     }
 }
@@ -53,6 +54,8 @@ public enum Demo {
         case appFile
         /// After a test run with failures.
         case tested
+        /// Release mode.
+        case release
     }
 
     /// An app model showing the demo project in the given scene.
@@ -93,6 +96,10 @@ public enum Demo {
         case .installed: app.openConsoleForSelection()
         case .appFile: await app.openDropped(URL(fileURLWithPath: "/Downloads/Harbor.ipa"))
         case .tested: app.runTests()
+        case .release:
+            app.mode = .release
+            await app.release?.refresh()
+            app.release?.selectedBuildID = "HarborInternal-4.2.3"
         }
         // Let the scripted events arrive.
         try? await Task.sleep(for: .milliseconds(200))
@@ -104,7 +111,8 @@ public enum Demo {
     static let environment = AppEnvironment(
         reader: DemoReader(), discovery: DemoDiscovery(), builder: DemoBuilder(), isXcodeOpen: { false },
         artifacts: DemoDeviceServices(), deviceApps: DemoDeviceServices(),
-        history: MemoryRunHistoryStore(records: history), buildFolders: DemoDeviceServices(), tester: DemoTester()
+        history: MemoryRunHistoryStore(records: history), buildFolders: DemoDeviceServices(), tester: DemoTester(),
+        releases: DemoRelease()
     )
 
     /// Two weeks of made-up runs, with one slow build and one failure.
@@ -164,7 +172,11 @@ public enum Demo {
             ],
             configurations: ["Debug", "Staging", "Release"],
             defaultConfiguration: "Release",
-            config: ProjectConfig(favoriteSchemes: ["Harbor", "Harbor Staging"], hiddenSchemes: ["*Tests"])
+            config: ProjectConfig(
+                favoriteSchemes: ["Harbor", "Harbor Staging"], hiddenSchemes: ["*Tests"],
+                release: ReleaseCommands(status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"])
+            ),
+            configFolder: URL(fileURLWithPath: "/Projects/Harbor")
         )
     }
 }
@@ -270,5 +282,62 @@ private struct DemoTester: TestRunning {
             continuation.yield(.finished(TestRunSummary(cases: cases, seconds: 64, logFile: nil)))
             continuation.finish()
         }
+    }
+}
+
+/// A made-up release status: two apps, two tracks each.
+private struct DemoRelease: ReleaseProviding {
+    private static let day: Double = 24 * 60 * 60
+
+    func status(_ provider: ReleaseProvider) async throws -> ReleaseStatus {
+        let now = Date().timeIntervalSince1970
+        func build(_ id: String, _ track: String?, _ version: String, daysAgo: Double, notes: String) -> ReleaseBuild {
+            ReleaseBuild(
+                id: id, app: "harbor", track: track, kind: track == nil ? .store : .testflight, version: version,
+                commit: "a41c9e2f7b3d", date: now - daysAgo * Self.day, branch: track == nil ? nil : "develop", notes: notes,
+                from: track == nil ? "HarborInternal-4.1.9" : nil
+            )
+        }
+        let internalLatest = build("HarborInternal-4.2.3", "internal", "4.2.3", daysAgo: 1, notes: "Faster catalog search")
+        let partnerLatest = build("HarborPartner-4.2.1", "partner", "4.2.1", daysAgo: 6, notes: "Build for payment partners")
+        let store = build("HarborStore-4.1", nil, "4.1", daysAgo: 9, notes: "Harbor 4.1")
+        return ReleaseStatus(
+            head: ReleaseHead(branch: "develop", commit: "a41c9e2f7b3d", subject: "Fix the cart total", dirty: false),
+            apps: [
+                ReleaseApp(
+                    id: "harbor", name: "Harbor", version: "4.2",
+                    tracks: [
+                        ReleaseTrack(id: "internal", name: "Internal testers", latest: internalLatest, commitsSince: 14, notes: .generated),
+                        ReleaseTrack(id: "partner", name: "Partners", latest: partnerLatest, commitsSince: 31, notes: .written),
+                    ],
+                    store: store, commitsSinceStore: 120
+                ),
+                ReleaseApp(
+                    id: "harbor-pro", name: "Harbor Pro", version: "2.0", tracks: [ReleaseTrack(id: "internal", name: "Internal testers")]
+                ),
+            ],
+            builds: [
+                internalLatest,
+                build("HarborInternal-4.2.2", "internal", "4.2.2", daysAgo: 3, notes: "Cart total with discounts"),
+                partnerLatest,
+                build("HarborInternal-4.2.1", "internal", "4.2.1", daysAgo: 8, notes: "First build of 4.2"),
+                store,
+            ],
+            branches: ["develop", "main", "feature/checkout"]
+        )
+    }
+
+    func plan(_ action: ReleaseAction, _ provider: ReleaseProvider) async throws -> ReleasePlan {
+        ReleasePlan(
+            title: "HarborInternal-4.2.4",
+            steps: ["Create tag HarborInternal-4.2.4 on a41c9e2 (develop)", "Write the notes below into the tag",
+                    "Push the tag, which starts the cloud build"],
+            notes: "Changes in this build\n- Faster catalog search\n- Cart total with discounts\n- Fix the cart total",
+            commit: "a41c9e2f7b3d"
+        )
+    }
+
+    func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult {
+        ReleaseResult(result: plan.title, done: ["Created tag \(plan.title)", "Pushed the tag"])
     }
 }

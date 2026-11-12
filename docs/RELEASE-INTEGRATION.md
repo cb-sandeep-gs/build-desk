@@ -1,7 +1,7 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Step R0 is built; R1 to R4 are not. The contract itself is described for providers in
+Written 2026-11-13. Steps R0 and R1 are built; R2 to R4 are not. The contract itself is described for providers in
 [release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
@@ -85,7 +85,7 @@ the action in full ("Create tag and push"). Nothing is run from a preview.
 | Step | Result | Where |
 |---|---|---|
 | R0 Contract (done 2026-11-13) | The contract and its schema; the `release` section of `.builddesk.json`; a provider for the first project that prints status, plan and run as JSON | Both repositories |
-| R1 Read-only Release mode | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
+| R1 Read-only Release mode (done 2026-11-13) | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
 | R2 Tagging | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
 | R3 Store | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
 | R4 Build Desk extras | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
@@ -109,6 +109,18 @@ plan for a new test build returned the next build's name, three steps and its ge
 Answers to two open points: a plan does contact the remote (the provider fetches tags to find the next build
 number), and it takes about ten seconds, so the app must show that it is working. The provider had no
 command-line status command; one was added there.
+
+## What R1 built
+
+| Part | Where | What it does |
+|---|---|---|
+| Model | `ReleaseModel`, `WindowMode` | Reads the status through the project's commands, keeps the chosen app and open build across refreshes, and shows a provider's failure in its own words with a retry. |
+| Window | `ReleaseView`, the mode switch in the toolbar | A Build / Release switch appears only for a project with release commands. Release mode shows an app switcher, the checkout it was read from, summary cards (version in code, on the store, one per track) and the recent builds; a build opens in place to show its name, commit, branch and first line of notes. |
+| Checks | `--snapshot --release` | Renders Release mode with the demo, or with a real project when `--project` is given. |
+
+Tried with the first provider: two apps, their four tracks and sixty recent builds were shown from its real data.
+
+A build's full notes and its commits are not shown yet: the contract has no command for one build's details.
 
 ## The first provider
 

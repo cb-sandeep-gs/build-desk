@@ -114,7 +114,8 @@ enum Sample {
     static func container() throws -> ProjectContainer { try ProjectContainer(url: projectURL) }
 
     static func snapshot(
-        of container: ProjectContainer, extraSchemes: [String] = [], config: ProjectConfig = ProjectConfig(), configProblem: String? = nil
+        of container: ProjectContainer, extraSchemes: [String] = [], config: ProjectConfig = ProjectConfig(), configProblem: String? = nil,
+        configFolder: URL? = nil
     ) -> ProjectSnapshot {
         let app = SchemeTarget(name: "Sample", productName: "Sample.app")
         let widget = SchemeTarget(name: "SampleWidget", productName: "SampleWidget.appex")
@@ -138,9 +139,47 @@ enum Sample {
             configurations: ["Release", "Debug", "Staging"],
             defaultConfiguration: "Release",
             config: config,
-            configProblem: configProblem
+            configProblem: configProblem,
+            configFolder: configFolder
         )
     }
+
+    static let releaseProvider = ReleaseProvider(
+        commands: ReleaseCommands(status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"]),
+        folder: URL(fileURLWithPath: "/projects")
+    )
+
+    static let internalBuild = ReleaseBuild(
+        id: "SampleInternal-4.2.3", app: "sample", track: "internal", kind: .testflight, version: "4.2.3",
+        commit: "a41c9e2", date: 1_794_472_609, branch: "develop", notes: "Faster search"
+    )
+    static let storeBuild = ReleaseBuild(
+        id: "SampleStore-4.1", app: "sample", track: nil, kind: .store, version: "4.1", from: "SampleInternal-4.1.9"
+    )
+    static let otherAppBuild = ReleaseBuild(id: "ProInternal-2.0.1", app: "pro", track: "internal", kind: .testflight, version: "2.0.1")
+
+    /// Two apps; the first has an internal track (generated notes) and a partner track (written notes).
+    static let releaseStatus = ReleaseStatus(
+        head: ReleaseHead(branch: "develop", commit: "a41c9e2", subject: "Fix the cart total", dirty: false),
+        apps: [
+            ReleaseApp(
+                id: "sample", name: "Sample", version: "4.2",
+                tracks: [
+                    ReleaseTrack(id: "internal", name: "Internal testers", latest: internalBuild, commitsSince: 14, notes: .generated),
+                    ReleaseTrack(id: "partner", name: "Partners", notes: .written),
+                ],
+                store: storeBuild, commitsSinceStore: 120
+            ),
+            ReleaseApp(id: "pro", name: "Sample Pro", version: "2.0", tracks: [ReleaseTrack(id: "internal", name: "Internal testers")]),
+        ],
+        builds: [internalBuild, otherAppBuild, storeBuild],
+        branches: ["develop", "main"]
+    )
+
+    static let releasePlan = ReleasePlan(
+        title: "SampleInternal-4.2.4", steps: ["Create tag SampleInternal-4.2.4 on a41c9e2", "Push the tag"],
+        notes: "Faster search", commit: "a41c9e2"
+    )
 
     /// Three tests in two classes: one failed, one skipped.
     static let testSummary = TestRunSummary(
@@ -264,6 +303,34 @@ struct FakeDeviceTools: DeviceToolsProviding {
 
     func copy(_ logs: [CrashLog], from device: Device, to folder: URL) async throws {
         try record("copy \(logs.count) logs from \(device.name) to \(folder.lastPathComponent)")
+    }
+}
+
+/// A project's release commands, answered from values a test sets.
+struct FakeReleases: ReleaseProviding {
+    let status = Locked<Result<ReleaseStatus, BuildDeskError>>(.success(Sample.releaseStatus))
+    let plan = Locked<Result<ReleasePlan, BuildDeskError>>(.success(Sample.releasePlan))
+    let result = Locked<Result<ReleaseResult, BuildDeskError>>(
+        .success(ReleaseResult(result: "SampleInternal-4.2.4", done: ["Created tag SampleInternal-4.2.4", "Pushed the tag"]))
+    )
+    let statusCalls = Locked(0)
+    let planned = Locked<[ReleaseAction]>([])
+    /// Each run as "action title, confirming <plan commit>".
+    let ran = Locked<[String]>([])
+
+    func status(_ provider: ReleaseProvider) async throws -> ReleaseStatus {
+        statusCalls.value += 1
+        return try status.value.get()
+    }
+
+    func plan(_ action: ReleaseAction, _ provider: ReleaseProvider) async throws -> ReleasePlan {
+        planned.value += [action]
+        return try plan.value.get()
+    }
+
+    func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult {
+        ran.value += ["\(action.kind.rawValue) \(plan.title), confirming \(plan.commit ?? "none")"]
+        return try result.value.get()
     }
 }
 

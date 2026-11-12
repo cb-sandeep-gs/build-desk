@@ -143,21 +143,38 @@ struct WelcomeView: View {
 
 /// An open project: scheme list on the left, the selected scheme on the right.
 struct ProjectView: View {
-    let app: AppModel
+    @Bindable var app: AppModel
     @Bindable var project: ProjectModel
 
     var body: some View {
-        NavigationSplitView {
-            SchemeListView(project: project)
-                .navigationSplitViewColumnWidth(
-                    min: Layout.sidebarMinWidth, ideal: Layout.sidebarIdealWidth, max: Layout.sidebarMaxWidth
-                )
-        } detail: {
-            SchemeDetailView(app: app, project: project)
+        Group {
+            if app.mode == .release, let release = app.release {
+                ReleaseView(release: release)
+            } else {
+                NavigationSplitView {
+                    SchemeListView(project: project)
+                        .navigationSplitViewColumnWidth(
+                            min: Layout.sidebarMinWidth, ideal: Layout.sidebarIdealWidth, max: Layout.sidebarMaxWidth
+                        )
+                } detail: {
+                    SchemeDetailView(app: app, project: project)
+                }
+            }
         }
         .navigationTitle(project.container.name)
         .navigationSubtitle(project.container.url.deletingLastPathComponent().lastPathComponent)
         .toolbar {
+            // Only a project with release commands has a second mode to switch to.
+            if app.release != nil {
+                ToolbarItem(placement: .principal) {
+                    Picker("Mode", selection: $app.mode) {
+                        ForEach(WindowMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .accessibilityIdentifier(AccessibilityID.modePicker)
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Open Project…", systemImage: "folder") { ProjectPicker.chooseAndOpen(in: app) }
                     .help("Open another project")
@@ -167,9 +184,10 @@ struct ProjectView: View {
                     Task {
                         await project.load()
                         await app.refreshEnvironment()
+                        await app.release?.refresh()
                     }
                 }
-                .help("Reload schemes and devices")
+                .help("Reload schemes, devices and the release status")
             }
         }
     }

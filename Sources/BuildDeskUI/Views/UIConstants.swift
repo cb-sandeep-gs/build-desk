@@ -21,6 +21,9 @@ public enum Layout {
     static let consoleFilterWidth: CGFloat = 160
     static let trendHeight: CGFloat = 64
     static let setMarkerSize: CGFloat = 6
+    static let releaseCardMinWidth: CGFloat = 170
+    /// Characters of a commit shown to people.
+    static let shortCommitLength = 7
     /// Builds shown in the build-time trend, and runs listed under it.
     static let trendRunCount = 30
     static let historyRowCount = 6
@@ -60,6 +63,8 @@ public enum AccessibilityID {
     public static let testButton = "test-button"
     public static let testResults = "test-results"
     public static let runAllButton = "run-all-button"
+    public static let releaseView = "release-view"
+    public static let modePicker = "mode-picker"
     public static let scheduleToggle = "schedule-toggle"
     public static let history = "history"
     public static let cleanButton = "clean-button"

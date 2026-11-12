@@ -53,6 +53,10 @@ particular screen. Each scheme remembers its own, and a pin keeps the options it
 tests on the selected device or simulator and lists the failures first, each with its reason and `file:line`.
 **Re-run Failed** runs only what failed; right-click a test or a class to run just that.
 
+**Release mode.** For a project whose `.builddesk.json` names release commands, a **Build / Release** switch
+appears in the toolbar. Release shows each app's version in code, what is on the store, the latest build per
+track and the recent builds, all read through the project's own commands.
+
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
 build of that scheme had.

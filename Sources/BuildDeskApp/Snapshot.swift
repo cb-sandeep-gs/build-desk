@@ -21,6 +21,7 @@ enum Snapshot {
         static let tested = "--tested"
         static let settings = "--settings"
         static let icon = "--icon"
+        static let release = "--release"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -41,12 +42,18 @@ enum Snapshot {
             let model = AppModel(environment: .live, store: Demo.scratchStore())
             await model.open(URL(fileURLWithPath: project))
             await model.refreshEnvironment()
+            // A real project's Release mode, read through its own release commands.
+            if arguments.contains(Argument.release), model.release != nil {
+                model.mode = .release
+                await model.release?.refresh()
+            }
             return model
         } else if arguments.contains(Argument.sheet) {
             return await Demo.app(showing: .appFile)
         } else {
             let scene: Demo.Scene = arguments.contains(Argument.installed) ? .installed
-                : arguments.contains(Argument.tested) ? .tested : .building
+                : arguments.contains(Argument.tested) ? .tested
+                : arguments.contains(Argument.release) ? .release : .building
             return await Demo.app(showing: scene)
         }
     }

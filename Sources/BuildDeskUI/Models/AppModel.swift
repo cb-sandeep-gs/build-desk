@@ -7,6 +7,10 @@ import Observation
 @Observable
 public final class AppModel {
     public internal(set) var project: ProjectModel?
+    /// The open project's release status; nil when the project names no release commands.
+    public internal(set) var release: ReleaseModel?
+    /// What the window shows. Release is offered only when `release` is there.
+    public var mode: WindowMode = .build
     public let devices: DeviceListModel
     public let run: RunModel
     public let console: ConsoleModel
@@ -108,6 +112,9 @@ public final class AppModel {
             newWarnings = nil
             buildFolderMessage = nil
             await model.load()
+            // A project that names release commands in its settings file gets a Release mode.
+            mode = .build
+            release = model.snapshot?.releaseProvider.map { ReleaseModel(provider: $0, client: environment.releases) }
             await reloadInsight(for: container)
         } catch {
             openError = userMessage(for: error)
@@ -127,6 +134,8 @@ public final class AppModel {
 
     public func closeProject() {
         project = nil
+        release = nil
+        mode = .build
     }
 
     /// Called when the user has read the message about a failed open.
