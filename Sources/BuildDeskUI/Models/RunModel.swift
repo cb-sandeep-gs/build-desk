@@ -88,7 +88,7 @@ public final class RunModel {
         self.expectedTaskCount = expectedTaskCount
         steps = PipelineStep.allCases.filter { step in
             switch step {
-            case .build: true
+            case .build: request.builds
             case .locate, .install: request.installs
             case .launch: request.installs && request.launches
             }

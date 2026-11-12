@@ -71,6 +71,7 @@ and dark:
 ```bash
 .build/debug/BuildDeskApp --snapshot window.png
 .build/debug/BuildDeskApp --snapshot small-dark.png --dark --width 760 --height 480
+.build/debug/BuildDeskApp --snapshot menu.png --menu        # the menu bar popover
 ```
 
 ## Testing against a real project

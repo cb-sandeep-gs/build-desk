@@ -16,6 +16,12 @@ public final class AppModel {
     public var launchesAfterInstall: Bool {
         didSet { store.launchesAfterInstall = launchesAfterInstall }
     }
+    /// Scheme and device pairs shown in the menu bar.
+    public private(set) var pins: [PinnedRun] {
+        didSet { store.pins = pins }
+    }
+    /// Why the last pin could not be run, until the next attempt.
+    public private(set) var pinError: String?
 
     private let environment: AppEnvironment
     private let store: PreferenceStore
@@ -27,6 +33,7 @@ public final class AppModel {
         run = RunModel(builder: environment.builder)
         recentProjects = store.recentProjects
         launchesAfterInstall = store.launchesAfterInstall
+        pins = store.pins
     }
 
     // MARK: - Projects
@@ -93,15 +100,18 @@ public final class AppModel {
     }
 
     /// Starts a run of the selected scheme on the selected device.
-    /// - Parameter installs: false builds only.
-    public func runSelected(installs: Bool) {
+    public func runSelected(_ mode: RunMode) {
         guard runBlocker == nil, let project, let scheme = project.selectedScheme, let device = selectedDevice else { return }
+        // Installing without building only makes sense for a scheme that has an app.
+        guard mode != .installOnly || scheme.isInstallable else { return }
         let request = BuildRequest(
             container: project.container,
             scheme: scheme.name,
             configuration: project.selectedConfiguration,
             device: device,
-            installs: installs && scheme.isInstallable,
+            builds: mode != .installOnly,
+            // A scheme with no app is built, whatever was asked for.
+            installs: mode != .buildOnly && scheme.isInstallable,
             launches: launchesAfterInstall
         )
         let key = Self.taskCountKey(
@@ -111,10 +121,11 @@ public final class AppModel {
         Task { [weak self] in
             guard let self else { return }
             await run.waitUntilFinished()
+            guard run.request == request else { return }
             // Remember how big this build was, to estimate the next one's progress.
-            if run.phase == .succeeded, run.request == request, run.taskCount > 0 {
-                store.setTaskCount(run.taskCount, for: key)
-            }
+            if run.phase == .succeeded, run.taskCount > 0 { store.setTaskCount(run.taskCount, for: key) }
+            // Someone looking at the window has already seen the result.
+            if !environment.isAppActive(), let notice = RunNotice.make(for: run) { await environment.notifier.post(notice) }
         }
     }
 
@@ -122,5 +133,57 @@ public final class AppModel {
     /// scheme are different builds with different task counts.
     static func taskCountKey(project: URL, scheme: String, configuration: String, deviceKind: Device.Kind) -> String {
         [project.path, scheme, configuration, deviceKind.rawValue].joined(separator: "|")
+    }
+
+    // MARK: - Pins
+
+    /// The current scheme, configuration and device as a pin; nil until all three are chosen.
+    public var pinForSelection: PinnedRun? {
+        guard let project, let scheme = project.selectedScheme, let device = selectedDevice else { return nil }
+        return PinnedRun(
+            project: project.container.url, scheme: scheme.name, configuration: project.selectedConfiguration,
+            deviceID: device.id, deviceName: device.name
+        )
+    }
+
+    public var isSelectionPinned: Bool {
+        pinForSelection.map { pin in pins.contains { $0.id == pin.id } } ?? false
+    }
+
+    /// Adds the current selection to the menu bar, or takes it out if it is there.
+    public func togglePinForSelection() {
+        guard let pin = pinForSelection else { return }
+        if isSelectionPinned { remove(pin) } else { pins.append(pin) }
+    }
+
+    public func remove(_ pin: PinnedRun) {
+        pins.removeAll { $0.id == pin.id }
+    }
+
+    /// The device a pin points at, if this Mac can see it now.
+    public func device(for pin: PinnedRun) -> Device? {
+        devices.devices.first { $0.id == pin.deviceID }
+    }
+
+    /// Runs a pin: opens its project if another is open, selects its scheme, configuration and
+    /// device, then builds and installs.
+    public func run(_ pin: PinnedRun) async {
+        guard !run.isRunning else { return }
+        pinError = nil
+        if project?.container.url != pin.project { await open(pin.project) }
+        guard let project, project.container.url == pin.project, project.snapshot?.scheme(named: pin.scheme) != nil else {
+            pinError = openError ?? "The scheme \(pin.scheme) is no longer in \(pin.project.deletingPathExtension().lastPathComponent)."
+            return
+        }
+        project.selectedSchemeName = pin.scheme
+        if project.snapshot?.configurations.contains(pin.configuration) == true { project.selectedConfiguration = pin.configuration }
+        // The device may have been plugged in since the last refresh.
+        await devices.refresh()
+        devices.selectedDeviceID = pin.deviceID
+        guard let device = selectedDevice, device.id == pin.deviceID, device.isReady else {
+            pinError = "\(pin.deviceName) is not connected. Connect and unlock it."
+            return
+        }
+        runSelected(.buildAndInstall)
     }
 }

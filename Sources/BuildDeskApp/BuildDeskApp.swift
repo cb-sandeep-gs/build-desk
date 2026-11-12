@@ -4,13 +4,11 @@ import SwiftUI
 
 /// The app's scenes; everything else lives in BuildDeskUI (testable) and BuildDeskCore.
 struct BuildDeskApp: App {
-    private static let mainWindowID = "main"
-
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel(environment: .live)
 
     var body: some Scene {
-        Window("Build Desk", id: Self.mainWindowID) {
+        Window("Build Desk", id: WindowID.main) {
             BuildDeskRootView(app: model)
         }
         .defaultSize(width: Layout.windowDefaultWidth, height: Layout.windowDefaultHeight)
@@ -24,11 +22,14 @@ struct BuildDeskApp: App {
             }
             // The same keys as Xcode, so the habit carries over.
             CommandMenu("Build") {
-                Button("Build and Install") { model.runSelected(installs: true) }
+                Button("Build and Install") { model.runSelected(.buildAndInstall) }
                     .keyboardShortcut("r")
                     .disabled(model.runBlocker != nil)
-                Button("Build Only") { model.runSelected(installs: false) }
+                Button("Build Only") { model.runSelected(.buildOnly) }
                     .keyboardShortcut("b")
+                    .disabled(model.runBlocker != nil)
+                Button("Install Last Build") { model.runSelected(.installOnly) }
+                    .keyboardShortcut("i")
                     .disabled(model.runBlocker != nil)
                 Button("Stop") { model.run.stop() }
                     .keyboardShortcut(".")
@@ -43,6 +44,27 @@ struct BuildDeskApp: App {
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
         }
+
+        // The hammer fills while a build is running, so progress is visible from any app.
+        MenuBarExtra {
+            MenuBarContent(app: model)
+        } label: {
+            Label("Build Desk", systemImage: model.run.isRunning ? "hammer.fill" : "hammer")
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+
+/// The popover, with the way back to the main window (only a view can open a window).
+private struct MenuBarContent: View {
+    let app: AppModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        MenuBarView(app: app) {
+            openWindow(id: WindowID.main)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 }
 
@@ -54,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // Until the menu bar item exists (BD-3), a closed window means the app is done.
-        true
+        // The menu bar item keeps working with the window closed; Quit is in its popover and the app menu.
+        false
     }
 }

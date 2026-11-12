@@ -60,10 +60,10 @@ struct RunProgressView: View {
                         ProgressView().progressViewStyle(.linear)
                     }
                 }
-                Text(runningText).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text(run.runningText).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
         case .succeeded:
-            Label(successText, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            Label(run.successText, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
         case .failed(let message):
             Label(message, systemImage: "xmark.octagon.fill")
                 .foregroundStyle(.red)
@@ -71,26 +71,6 @@ struct RunProgressView: View {
         case .stopped:
             Label("Stopped.", systemImage: "stop.circle").foregroundStyle(.secondary)
         }
-    }
-
-    private var runningText: String {
-        if run.statuses[.build] == .running {
-            if run.isResolvingPackages { return "Resolving packages…" }
-            let tasks = "\(run.taskCount.formatted()) tasks"
-            return run.currentTarget.map { "\(tasks) · building \($0)" } ?? (run.taskCount == 0 ? "Starting the build…" : tasks)
-        }
-        let device = run.request?.device.name ?? "the device"
-        if run.statuses[.launch] == .running { return "Launching on \(device)…" }
-        if run.statuses[.install] == .running { return "Installing on \(device)…" }
-        return "Finding the built app…"
-    }
-
-    private var successText: String {
-        guard let request = run.request else { return "Done." }
-        guard request.installs else { return "\(request.scheme) built." }
-        return request.launches
-            ? "\(request.scheme) is installed and running on \(request.device.name)."
-            : "\(request.scheme) is installed on \(request.device.name)."
     }
 
     @ViewBuilder private var diagnostics: some View {

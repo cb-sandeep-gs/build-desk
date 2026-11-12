@@ -6,6 +6,8 @@ public struct BuildRequest: Sendable, Equatable {
     public let scheme: String
     public let configuration: String
     public let device: Device
+    /// Build the scheme first. False installs the app the last build left behind, without rebuilding.
+    public let builds: Bool
     /// Install the built app on the device. False means build only (frameworks, a compile check).
     public let installs: Bool
     /// Open the app after installing it.
@@ -16,6 +18,7 @@ public struct BuildRequest: Sendable, Equatable {
         scheme: String,
         configuration: String = BuildDeskConstants.fallbackConfiguration,
         device: Device,
+        builds: Bool = true,
         installs: Bool = true,
         launches: Bool = true
     ) {
@@ -23,6 +26,7 @@ public struct BuildRequest: Sendable, Equatable {
         self.scheme = scheme
         self.configuration = configuration
         self.device = device
+        self.builds = builds
         self.installs = installs
         self.launches = launches
     }

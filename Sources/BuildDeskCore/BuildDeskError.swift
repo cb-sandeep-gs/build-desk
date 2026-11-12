@@ -16,6 +16,8 @@ public enum BuildDeskError: Error, Equatable, Sendable {
     case buildFailed(errors: [Diagnostic], logFile: String?)
     /// The scheme built, but none of its products is an application that can be installed.
     case noApplicationProduct(scheme: String)
+    /// An install without a build was asked for, but no earlier build left an app behind.
+    case noBuiltProduct(scheme: String)
     /// Install or launch failed after a good build.
     case stepFailed(step: PipelineStep, message: String)
     /// No device matches the name or identifier the caller gave.
@@ -41,6 +43,8 @@ extension BuildDeskError: LocalizedError {
                 : "The build failed with \(errors.count) error\(errors.count == 1 ? "" : "s"). First: \(errors[0].message)"
         case .noApplicationProduct(let scheme):
             "The scheme \(scheme) doesn't build an app, so there is nothing to install. Choose an app scheme."
+        case .noBuiltProduct(let scheme):
+            "There is no built copy of \(scheme) for this device yet. Build it once, then it can be installed again without rebuilding."
         case .stepFailed(let step, let message):
             "The \(step.rawValue) step failed. \(message)"
         case .deviceNotFound(let query):

@@ -38,6 +38,9 @@ func listDevices(_ arguments: Arguments) async throws {
 }
 
 func run(_ arguments: Arguments) async throws {
+    guard !(arguments.has(CLI.Flag.buildOnly) && arguments.has(CLI.Flag.installOnly)) else {
+        throw UsageError(message: "\(CLI.Flag.buildOnly) and \(CLI.Flag.installOnly) can't be used together.")
+    }
     let container = try arguments.container()
     let scheme = try arguments.required(CLI.Option.scheme)
     let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
@@ -51,6 +54,7 @@ func run(_ arguments: Arguments) async throws {
         scheme: scheme,
         configuration: configuration,
         device: device,
+        builds: !arguments.has(CLI.Flag.installOnly),
         installs: !arguments.has(CLI.Flag.buildOnly),
         launches: !arguments.has(CLI.Flag.noLaunch)
     )

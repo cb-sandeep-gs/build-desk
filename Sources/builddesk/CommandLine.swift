@@ -24,7 +24,8 @@ enum CLI {
         static let full = "--full"
         static let noLaunch = "--no-launch"
         static let buildOnly = "--build-only"
-        static let all: Set<String> = [json, full, noLaunch, buildOnly]
+        static let installOnly = "--install-only"
+        static let all: Set<String> = [json, full, noLaunch, buildOnly, installOnly]
     }
 
     /// Exit codes follow sysexits: 64 is a usage error, 1 a failed operation.
@@ -41,12 +42,13 @@ enum CLI {
       builddesk targets <project> [--json]
       builddesk devices [--json]
       builddesk run <project> --scheme <name> --device <name-or-udid>
-                    [--configuration <name>] [--no-launch] [--build-only]
+                    [--configuration <name>] [--no-launch] [--build-only | --install-only]
 
     <project> is a .xcodeproj or .xcworkspace.
-      --full        also ask xcodebuild for schemes that have no scheme file (slower)
-      --no-launch   install the app but don't open it
-      --build-only  build the scheme and stop (frameworks, compile checks)
+      --full          also ask xcodebuild for schemes that have no scheme file (slower)
+      --no-launch     install the app but don't open it
+      --build-only    build the scheme and stop (frameworks, compile checks)
+      --install-only  install the app the last build left behind, without rebuilding
     """
 }
 

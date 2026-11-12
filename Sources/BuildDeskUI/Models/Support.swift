@@ -23,17 +23,25 @@ public struct AppEnvironment: Sendable {
     public let builder: any BuildRunning
     /// True while Xcode is open; an open Xcode can make command-line builds fail.
     public let isXcodeOpen: @MainActor @Sendable () -> Bool
+    /// Tells the user a run ended when they are not looking at Build Desk.
+    public let notifier: any RunNotifying
+    /// True while Build Desk is the frontmost app; a notification would only repeat what is on screen.
+    public let isAppActive: @MainActor @Sendable () -> Bool
 
     public init(
         reader: any ProjectReading,
         discovery: any DeviceDiscovering,
         builder: any BuildRunning,
-        isXcodeOpen: @escaping @MainActor @Sendable () -> Bool
+        isXcodeOpen: @escaping @MainActor @Sendable () -> Bool,
+        notifier: any RunNotifying = SilentNotifier(),
+        isAppActive: @escaping @MainActor @Sendable () -> Bool = { true }
     ) {
         self.reader = reader
         self.discovery = discovery
         self.builder = builder
         self.isXcodeOpen = isXcodeOpen
+        self.notifier = notifier
+        self.isAppActive = isAppActive
     }
 }
 
@@ -52,6 +60,7 @@ public final class PreferenceStore {
         static let lastDevice = "lastDevice"
         static let launchesAfterInstall = "launchesAfterInstall"
         static let taskCounts = "taskCounts"
+        static let pins = "pins"
     }
 
     /// How many recently opened projects are remembered.
@@ -98,6 +107,12 @@ public final class PreferenceStore {
     /// how many tasks a build will have, so the last count is what progress is estimated against.
     public func taskCount(for key: String) -> Int? { dictionary(Key.taskCounts)[key].flatMap(Int.init) }
     public func setTaskCount(_ count: Int, for key: String) { update(Key.taskCounts, key, String(count)) }
+
+    /// Scheme and device pairs shown in the menu bar, in the order they were pinned.
+    public var pins: [PinnedRun] {
+        get { defaults.data(forKey: Key.pins).flatMap { try? JSONDecoder().decode([PinnedRun].self, from: $0) } ?? [] }
+        set { defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.pins) }
+    }
 
     private func dictionary(_ key: String) -> [String: String] {
         defaults.dictionary(forKey: key) as? [String: String] ?? [:]

@@ -322,7 +322,7 @@ final class AppModelTests: XCTestCase {
         app.project?.selectedConfiguration = "Staging"
         app.launchesAfterInstall = false
 
-        app.runSelected(installs: true)
+        app.runSelected(.buildAndInstall)
         await app.run.waitUntilFinished()
 
         let request = builder.requests.value.first
@@ -335,7 +335,7 @@ final class AppModelTests: XCTestCase {
 
         // The next run of the same scheme measures its progress against this one.
         await waitUntil { store.make().taskCount(for: "/projects/Sample.xcodeproj|Sample|Staging|physical") == 3 }
-        app.runSelected(installs: true)
+        app.runSelected(.buildAndInstall)
         await app.run.waitUntilFinished()
         XCTAssertEqual(app.run.expectedTaskCount, 3)
     }
@@ -347,11 +347,11 @@ final class AppModelTests: XCTestCase {
         let app = await openApp(store, builder: builder)
 
         app.project?.selectedSchemeName = "SampleKit"
-        app.runSelected(installs: true)
+        app.runSelected(.buildAndInstall)
         await app.run.waitUntilFinished()
         // An extension scheme that also builds its app can be installed, like in Xcode.
         app.project?.selectedSchemeName = "SampleWidget"
-        app.runSelected(installs: true)
+        app.runSelected(.buildAndInstall)
         await app.run.waitUntilFinished()
 
         XCTAssertEqual(builder.requests.value.map(\.installs), [false, true])

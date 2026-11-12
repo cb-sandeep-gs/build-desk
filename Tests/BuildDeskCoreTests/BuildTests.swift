@@ -109,15 +109,22 @@ final class BuildPipelineTests: XCTestCase {
         return runner
     }
 
-    private func request(device: Device = Sample.phone, installs: Bool = true, launches: Bool = true) throws -> BuildRequest {
-        BuildRequest(container: try Sample.container(), scheme: "Sample", device: device, installs: installs, launches: launches)
+    private func request(
+        device: Device = Sample.phone, builds: Bool = true, installs: Bool = true, launches: Bool = true
+    ) throws -> BuildRequest {
+        BuildRequest(
+            container: try Sample.container(), scheme: "Sample", device: device, builds: builds, installs: installs, launches: launches
+        )
     }
 
     /// Runs the pipeline to its end and returns the events as short labels (durations vary).
-    private func events(_ runner: FakeToolRunner, _ request: BuildRequest) async throws -> (labels: [String], summary: RunSummary?) {
+    private func events(
+        _ runner: FakeToolRunner, _ request: BuildRequest, builtAppExists: Bool = true
+    ) async throws -> (labels: [String], summary: RunSummary?) {
         var labels: [String] = []
         var summary: RunSummary?
-        for try await event in BuildPipeline(toolRunner: runner, logDirectory: nil).run(request) {
+        let pipeline = BuildPipeline(toolRunner: runner, logDirectory: nil) { _ in builtAppExists }
+        for try await event in pipeline.run(request) {
             switch event {
             case .stepStarted(let step): labels.append("start \(step.rawValue)")
             case .stepFinished(let step, _): labels.append("end \(step.rawValue)")
@@ -170,6 +177,30 @@ final class BuildPipelineTests: XCTestCase {
         XCTAssertEqual(noLaunchLabels.last, "end install")
     }
 
+    func testInstallOnlySkipsTheBuildAndUsesTheLastOne() async throws {
+        let runner = runner()
+        let (labels, summary) = try await events(runner, request(builds: false))
+
+        XCTAssertEqual(labels, ["start locate", "end locate", "start install", "end install", "start launch", "end launch"])
+        // No build ran, so nothing was streamed and there is no build log.
+        XCTAssertFalse(runner.commands.contains { $0.arguments.last == "build" })
+        XCTAssertEqual(summary?.taskCount, 0)
+        XCTAssertNil(summary?.logFile)
+        XCTAssertEqual(summary?.product?.bundleIdentifier, "com.example.sample")
+    }
+
+    func testInstallOnlyWithoutAnEarlierBuildSaysSo() async throws {
+        let runner = runner()
+        do {
+            _ = try await events(runner, request(builds: false), builtAppExists: false)
+            XCTFail("expected a failure")
+        } catch {
+            XCTAssertEqual(error as? BuildDeskError, .noBuiltProduct(scheme: "Sample"))
+        }
+        // Nothing is installed when there is nothing to install.
+        XCTAssertFalse(runner.commands.contains { $0.arguments.contains("install") })
+    }
+
     func testFailedBuildReportsItsErrorsOnceAndStops() async throws {
         let runner = runner(build: Fixtures.failingBuildOutput, exit: 65)
         do {
@@ -207,7 +238,8 @@ final class BuildPipelineTests: XCTestCase {
         let folder = try TemporaryFolder()
         defer { folder.remove() }
         var summary: RunSummary?
-        for try await event in BuildPipeline(toolRunner: runner(), logDirectory: folder.url).run(try request()) {
+        let pipeline = BuildPipeline(toolRunner: runner(), logDirectory: folder.url, fileExists: { _ in true })
+        for try await event in pipeline.run(try request()) {
             if case .finished(let finished) = event { summary = finished }
         }
         let log = try XCTUnwrap(summary?.logFile)

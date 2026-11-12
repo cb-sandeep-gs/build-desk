@@ -14,6 +14,7 @@ public enum Layout {
     /// The detail column stops growing here, so lines stay readable on a wide window.
     static let detailMaxWidth: CGFloat = 820
     static let welcomeWidth: CGFloat = 420
+    public static let menuBarWidth: CGFloat = 330
 
     static let spacingSmall: CGFloat = 6
     static let spacing: CGFloat = 12
@@ -26,6 +27,11 @@ public enum Layout {
     static let diagnosticsShownAtOnce = 50
 }
 
+/// Names of the app's windows, shared by the scenes and the views that open them.
+public enum WindowID {
+    public static let main = "main"
+}
+
 /// Identifiers for UI tests and accessibility tools.
 public enum AccessibilityID {
     public static let openProject = "open-project"
@@ -34,6 +40,9 @@ public enum AccessibilityID {
     public static let configurationPicker = "configuration-picker"
     public static let runButton = "run-button"
     public static let buildOnlyButton = "build-only-button"
+    public static let installOnlyButton = "install-only-button"
+    public static let pinButton = "pin-button"
+    public static let menuBarPins = "menu-bar-pins"
     public static let stopButton = "stop-button"
     public static let launchToggle = "launch-toggle"
     public static let runStatus = "run-status"

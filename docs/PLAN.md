@@ -35,7 +35,7 @@ output (`-json`, `--json-output`) only.
 | BD-0 Proof | `Scripts/phase0-proof.sh` builds, installs and launches a scheme on a real device with Xcode closed. | Done 2026-11-12 |
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
-| BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Not started |
+| BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
 | BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Not started |
 
 ## What BD-1 built
@@ -73,11 +73,24 @@ fakes, and extension schemes that also build their app count as installable.
 
 Menu keys match Xcode: ⌘R build and install, ⌘B build only, ⌘. stop, ⇧⌘R reload, ⌘O open.
 
+## What BD-3 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Pins | `PinnedRun`, `AppModel.run(_:)` | The Pin button in the window saves the scheme, configuration and device together. Running a pin opens its project if needed, selects everything and builds and installs. |
+| Menu bar | `MenuBarView` | A hammer in the menu bar (filled while building) opens a popover with the current run, its progress and Stop, the pins with a one-click button each, Open Build Desk and Quit. |
+| Notification | `RunNotice`, `UserNotificationNotifier` | When a run ends while Build Desk is not the front app, a system notification says what was installed where and how long it took, or why it failed. A stopped run says nothing. Permission is asked the first time there is something to say. |
+| Install last build | `BuildRequest.builds`, `RunMode.installOnly` | Skips the build and installs the app the last build left behind; says so plainly when there is none. Also `builddesk run --install-only` and ⌘I. |
+
+The app now keeps running when its window is closed, so the menu bar item stays available.
+
 Known gaps:
 
-- **Not clicked through by hand yet.** The window was checked from rendered snapshots (demo and the Mercury
-  project) and the run path is tested with fakes; the same pipeline ran on a real device from the command line.
-  A person still needs to press Build and Install in the window once.
+- **Not clicked through by hand yet.** The window and the menu bar popover were checked from rendered snapshots
+  and the run path is tested with fakes; the same pipeline ran on a real device from the command line. A person
+  still needs to press Build and Install, run a pin and see a notification once.
+- **Install last build** was tried with the real tools only where no build exists (it reports that correctly);
+  the path where a build exists is covered by tests against a fake.
 - **Simulator install and launch** are covered by tests against a fake tool runner, not yet tried on a real simulator.
 - **A test scheme that also has a Run action** (it runs the host app) is listed under Apps.
 - **Workspace groups:** project references nested in workspace groups with their own paths are not followed.

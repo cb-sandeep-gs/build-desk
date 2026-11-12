@@ -52,6 +52,14 @@ struct SchemeDetailView: View {
                 Badge(text: platform.rawValue, symbol: platform.symbol)
             }
             Spacer()
+            Button(app.isSelectionPinned ? "Unpin" : "Pin", systemImage: app.isSelectionPinned ? "pin.fill" : "pin") {
+                app.togglePinForSelection()
+            }
+            .disabled(app.pinForSelection == nil)
+            .help(app.isSelectionPinned
+                ? "Remove this scheme and device from the menu bar"
+                : "Keep this scheme and device in the menu bar, to build and install in one click")
+            .accessibilityIdentifier(AccessibilityID.pinButton)
         }
     }
 
@@ -129,7 +137,7 @@ struct SchemeDetailView: View {
                         .accessibilityIdentifier(AccessibilityID.stopButton)
                 } else {
                     Button(scheme.isInstallable ? "Build and Install" : "Build", systemImage: "play.fill") {
-                        app.runSelected(installs: true)
+                        app.runSelected(.buildAndInstall)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
@@ -137,10 +145,15 @@ struct SchemeDetailView: View {
                     .accessibilityIdentifier(AccessibilityID.runButton)
 
                     if scheme.isInstallable {
-                        Button("Build Only") { app.runSelected(installs: false) }
+                        Button("Build Only") { app.runSelected(.buildOnly) }
                             .controlSize(.large)
                             .disabled(app.runBlocker != nil)
                             .accessibilityIdentifier(AccessibilityID.buildOnlyButton)
+                        Button("Install Last Build") { app.runSelected(.installOnly) }
+                            .controlSize(.large)
+                            .disabled(app.runBlocker != nil)
+                            .help("Install the app the last build left behind, without rebuilding")
+                            .accessibilityIdentifier(AccessibilityID.installOnlyButton)
                     }
                 }
                 if scheme.isInstallable {

@@ -15,6 +15,7 @@ enum Snapshot {
         static let height = "--height"
         static let dark = "--dark"
         static let welcome = "--welcome"
+        static let menu = "--menu"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -46,20 +47,27 @@ enum Snapshot {
             model = await Demo.runningApp()
         }
 
+        // The menu bar popover is drawn in a bare window as tall as its content; the main window
+        // in a titled one of the requested size.
+        let isMenu = arguments.contains(Argument.menu)
+        let content: NSView = isMenu
+            ? NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))
+            : NSHostingView(rootView: BuildDeskRootView(app: model, autoloads: false))
+        let frame = CGRect(origin: offscreenOrigin, size: isMenu ? content.fittingSize : size)
         let window = NSWindow(
-            contentRect: CGRect(origin: offscreenOrigin, size: size),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            contentRect: frame,
+            styleMask: isMenu ? [.borderless] : [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.appearance = NSAppearance(named: arguments.contains(Argument.dark) ? .darkAqua : .aqua)
-        window.contentView = NSHostingView(rootView: BuildDeskRootView(app: model, autoloads: false))
-        window.setFrame(CGRect(origin: offscreenOrigin, size: size), display: true)
+        window.contentView = content
+        window.setFrame(frame, display: true)
         window.orderFront(nil)
         try? await Task.sleep(for: settleTime)
 
         // The frame view is the whole window, title bar and toolbar included.
-        guard let view = window.contentView?.superview,
+        guard let view = isMenu ? content : window.contentView?.superview,
               let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return EXIT_FAILURE }
         view.cacheDisplay(in: view.bounds, to: bitmap)
         guard let png = bitmap.representation(using: .png, properties: [:]) else { return EXIT_FAILURE }

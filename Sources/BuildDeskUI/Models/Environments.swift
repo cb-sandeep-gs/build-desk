@@ -13,7 +13,9 @@ extension AppEnvironment {
             builder: BuildPipeline(),
             isXcodeOpen: {
                 NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == xcodeBundleIdentifier }
-            }
+            },
+            notifier: UserNotificationNotifier(),
+            isAppActive: { NSApp?.isActive ?? false }
         )
     }
 }
@@ -37,6 +39,12 @@ public enum Demo {
     @MainActor
     public static func runningApp() async -> AppModel {
         let store = scratchStore()
+        store.pins = [
+            PinnedRun(project: projectURL, scheme: "Harbor", configuration: "Debug", deviceID: "DEMO-PHONE", deviceName: "Harbor iPhone"),
+            PinnedRun(project: projectURL, scheme: "Harbor Staging", configuration: "Staging", deviceID: "DEMO-SIM",
+                      deviceName: "iPhone 17 Pro"),
+            PinnedRun(project: projectURL, scheme: "Harbor", configuration: "Release", deviceID: "DEMO-PAD", deviceName: "Test iPad"),
+        ]
         let app = AppModel(environment: environment, store: store)
         await app.open(projectURL)
         await app.refreshEnvironment()
@@ -45,7 +53,7 @@ public enum Demo {
             previousTaskCount,
             for: AppModel.taskCountKey(project: projectURL, scheme: "Harbor", configuration: "Debug", deviceKind: .physical)
         )
-        app.runSelected(installs: true)
+        app.runSelected(.buildAndInstall)
         // Let the scripted build events arrive.
         try? await Task.sleep(for: .milliseconds(200))
         return app

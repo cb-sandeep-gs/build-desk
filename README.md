@@ -6,8 +6,8 @@ Xcode.
 Build Desk drives the command-line tools that ship inside Xcode (`xcodebuild`, `devicectl`, `simctl`), so Xcode
 must be installed but never needs to be running. Signing uses the Apple account already saved in Xcode.
 
-**Status:** the Mac app's main window works (BD-2), on top of the core library and the `builddesk` command-line
-tool (BD-1). The menu bar item comes in BD-3. See [docs/PLAN.md](docs/PLAN.md).
+**Status:** the Mac app has its main window (BD-2) and menu bar item (BD-3), on top of the core library and the
+`builddesk` command-line tool (BD-1). See [docs/PLAN.md](docs/PLAN.md).
 
 ## Use the app
 
@@ -26,7 +26,15 @@ open .build/BuildDesk.app
    repository checkout works). You can also drop it on the window.
 2. Pick a scheme in the list. Schemes are grouped as Apps, Extensions, Frameworks and Tests.
 3. Pick a device and a configuration. Only devices that fit the scheme's platform are offered.
-4. Press **Build and Install** (⌘R). **Build Only** (⌘B) compiles without installing; **Stop** (⌘.) ends a run.
+4. Press **Build and Install** (⌘R). **Build Only** (⌘B) compiles without installing; **Install Last Build** (⌘I)
+   puts the app from the last build on the device without rebuilding; **Stop** (⌘.) ends a run.
+
+**Menu bar.** Press **Pin** in the window to keep the current scheme, configuration and device in the menu bar.
+The hammer icon there opens a list of your pins, each with a one-click build and install, plus the progress of
+the current run. The app keeps running when its window is closed; quit it from the popover or with ⌘Q.
+
+**Notifications.** When a run ends while you are in another app, Build Desk posts a notification with the result.
+macOS asks for permission the first time.
 
 The app is ad-hoc signed for local use. The first time you open a copy built on another Mac, macOS asks you to
 confirm it in System Settings.
@@ -57,6 +65,7 @@ Options of `run`:
 | `--configuration <name>` | Build configuration. Defaults to the project's own default. |
 | `--no-launch` | Install the app but don't open it. |
 | `--build-only` | Build and stop; for frameworks and compile checks. |
+| `--install-only` | Install the app the last build left behind, without rebuilding. |
 
 The build goes into Xcode's normal DerivedData folder, so it is incremental with builds made from Xcode itself.
 The full output of each run is kept in `~/Library/Logs/BuildDesk` (the newest 20 runs).
@@ -79,7 +88,7 @@ To check the window without opening it, render it to an image:
 ```
 
 This shows a made-up demo project with a build in progress. Add `--dark`, `--width <points>`, `--height <points>`,
-`--welcome` for the welcome screen, or `--project <path>` for a real project.
+`--welcome` for the welcome screen, `--menu` for the menu bar popover, or `--project <path>` for a real project.
 
 ## The phase 0 proof script
 

@@ -8,11 +8,19 @@ public struct BuildPipeline: Sendable {
 
     private let toolRunner: any ToolRunning
     private let logDirectory: URL?
+    private let fileExists: @Sendable (String) -> Bool
 
-    /// - Parameter logDirectory: where full build logs go; nil turns logging off.
-    public init(toolRunner: any ToolRunning = ProcessToolRunner(), logDirectory: URL? = RunLog.defaultDirectory) {
+    /// - Parameters:
+    ///   - logDirectory: where full build logs go; nil turns logging off.
+    ///   - fileExists: whether a built app is on disk; replaced in tests, which have no build folder.
+    public init(
+        toolRunner: any ToolRunning = ProcessToolRunner(),
+        logDirectory: URL? = RunLog.defaultDirectory,
+        fileExists: @escaping @Sendable (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) {
         self.toolRunner = toolRunner
         self.logDirectory = logDirectory
+        self.fileExists = fileExists
     }
 
     /// Starts the run. Stopping the iteration, or cancelling the task that iterates, stops the
@@ -35,22 +43,33 @@ public struct BuildPipeline: Sendable {
     // MARK: - Steps
 
     private func execute(_ request: BuildRequest, emit: Emit) async throws -> RunSummary {
-        // A log that cannot be created must not block the build.
-        let log = logDirectory.flatMap { try? RunLog(directory: $0, scheme: request.scheme) }
         var seconds: [PipelineStep: Double] = [:]
+        var report = BuildReport()
+        var logFile: URL?
 
-        let report: BuildReport
-        do {
-            report = try await step(.build, &seconds, emit) { try await build(request, log: log, emit: emit) }
-        } catch {
+        if request.builds {
+            // A log that cannot be created must not block the build.
+            let log = logDirectory.flatMap { try? RunLog(directory: $0, scheme: request.scheme) }
+            logFile = log?.url
+            do {
+                report = try await step(.build, &seconds, emit) { try await build(request, log: log, emit: emit) }
+            } catch {
+                await log?.close()
+                throw error
+            }
             await log?.close()
-            throw error
         }
-        await log?.close()
 
         var product: BuiltProduct?
         if request.installs {
-            let built = try await step(.locate, &seconds, emit) { try await locateProduct(request) }
+            let built = try await step(.locate, &seconds, emit) {
+                let found = try await locateProduct(request)
+                // Without a build in this run, the app is only there if an earlier build left it.
+                guard request.builds || fileExists(found.appURL.path) else {
+                    throw BuildDeskError.noBuiltProduct(scheme: request.scheme)
+                }
+                return found
+            }
             product = built
             try await step(.install, &seconds, emit) { try await install(built, on: request.device) }
             if request.launches {
@@ -62,7 +81,7 @@ public struct BuildPipeline: Sendable {
             taskCount: report.taskCount,
             warnings: report.warnings,
             secondsByStep: seconds,
-            logFile: log?.url
+            logFile: logFile
         )
     }
 
