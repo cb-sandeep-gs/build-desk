@@ -114,6 +114,28 @@ public struct RunNotice: Equatable, Sendable {
     }
 }
 
+extension RunNotice {
+    /// The notice for a finished test run; nil for one the user stopped.
+    @MainActor
+    public static func make(for tests: TestRunModel) -> RunNotice? {
+        guard let scheme = tests.request?.scheme else { return nil }
+        switch tests.phase {
+        case .finished:
+            guard let summary = tests.summary else { return nil }
+            let failed = summary.count(.failed)
+            let counts = "\(summary.count(.passed)) passed\(failed > 0 ? ", \(failed) failed" : "")"
+            return RunNotice(
+                title: failed > 0 ? "\(scheme) tests failed" : "\(scheme) tests passed",
+                body: "\(counts) in \(DurationText.short(summary.seconds))."
+            )
+        case .failed(let message):
+            return RunNotice(title: "\(scheme) tests could not run", body: message)
+        case .idle, .building, .testing, .stopped:
+            return nil
+        }
+    }
+}
+
 /// Delivers a notice to the user.
 public protocol RunNotifying: Sendable {
     func post(_ notice: RunNotice) async

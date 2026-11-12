@@ -15,6 +15,7 @@ struct SchemeDetailView: View {
                     destination(scheme)
                     actions(scheme)
                     RunProgressView(run: app.run)
+                    TestResultsView(app: app)
                     if app.run.phase == .succeeded { NewWarningsView(newWarnings: app.newWarnings) }
                     ConsoleView(console: app.console)
                     targets(scheme)
@@ -175,17 +176,7 @@ struct SchemeDetailView: View {
                 }
                 Spacer()
             }
-            // On a row of their own, so the buttons above keep their full titles in a narrow window.
-            if scheme.isInstallable {
-                HStack(spacing: Layout.spacing) {
-                    Toggle("Launch after install", isOn: $app.launchesAfterInstall)
-                        .disabled(app.run.isRunning)
-                        .accessibilityIdentifier(AccessibilityID.launchToggle)
-                    Spacer()
-                    InstalledAppMenu(app: app, scheme: scheme)
-                }
-                LaunchOptionsView(app: app)
-            }
+            secondaryActions(scheme)
             if let message = app.uninstallMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)
             }
@@ -200,11 +191,36 @@ struct SchemeDetailView: View {
         }
     }
 
+    /// On rows of their own, so the buttons above keep their full titles in a narrow window.
+    @ViewBuilder
+    private func secondaryActions(_ scheme: Scheme) -> some View {
+        if scheme.isInstallable {
+            HStack(spacing: Layout.spacing) {
+                Toggle("Launch after install", isOn: $app.launchesAfterInstall)
+                    .disabled(app.run.isRunning)
+                    .accessibilityIdentifier(AccessibilityID.launchToggle)
+                Spacer()
+                if app.canTestSelection { testButton }
+                InstalledAppMenu(app: app, scheme: scheme)
+            }
+            LaunchOptionsView(app: app)
+        } else if app.canTestSelection {
+            testButton
+        }
+    }
+
+    private var testButton: some View {
+        Button("Run Tests", systemImage: "checkmark.diamond") { app.runTests() }
+            .disabled(app.runBlocker != nil)
+            .help("Build this scheme for testing and run its tests on the selected device")
+            .accessibilityIdentifier(AccessibilityID.testButton)
+    }
+
     private func notInstallableNote(_ scheme: Scheme) -> String {
         switch scheme.kind {
         case .appExtension: "An extension ships inside its app. Install the app's scheme to get it on a device."
         case .framework: "A framework has nothing to install; Build checks that it compiles."
-        case .tests: "Build Desk builds this scheme but does not run tests yet."
+        case .tests: "This scheme has no app to install. Run Tests builds it and runs its tests."
         case .app, .other: "This scheme has no app to install; Build checks that it compiles."
         }
     }

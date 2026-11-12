@@ -8,7 +8,7 @@ must be installed but never needs to be running. Signing uses the Apple account 
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
 window (BD-2), the menu bar item (BD-3), the extras (BD-4), what a team needs to share it (BD-5: project
-settings file, device checks, release script), build insight (BD-6) and launch options (BD-7). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
+settings file, device checks, release script), build insight (BD-6), launch options (BD-7) and running tests (BD-8). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
 is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Use the app
@@ -44,6 +44,10 @@ the branch and commit it was built from. The **More** menu opens the app's **con
 **Launch options.** Under the buttons, **Launch options** takes command-line arguments, environment variables
 (`NAME=value`, separated by spaces) and a link to open, for example to start the app with a debug flag or on a
 particular screen. Each scheme remembers its own, and a pin keeps the options it was made with.
+
+**Tests.** **Run Tests** (⌘U) appears on any scheme that has tests. It builds the scheme for testing, runs the
+tests on the selected device or simulator and lists the failures first, each with its reason and `file:line`.
+**Re-run Failed** runs only what failed; right-click a test or a class to run just that.
 
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
@@ -124,6 +128,7 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk install <app-or-ipa> --device <name-or-udid>` | Installs a built `.app` or `.ipa` and launches it. |
 | `builddesk console <bundle-id> --device <name-or-udid>` | Relaunches an installed app and prints what it writes until it exits or you press Ctrl-C. |
 | `builddesk uninstall <bundle-id> --device <name-or-udid>` | Removes an app and its data from the device. |
+| `builddesk test <project> --scheme <name> --device <name-or-udid>` | Runs the scheme's tests and prints the failures. `--only <Bundle[/Class[/test]]>` limits the run. Exits with 2 when tests failed. |
 
 `<project>` is a `.xcodeproj` or `.xcworkspace`. Add `--json` to `schemes`, `targets` and `devices` for
 machine-readable output.

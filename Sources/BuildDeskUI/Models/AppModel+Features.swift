@@ -78,6 +78,37 @@ extension AppModel {
     }
 }
 
+// MARK: - Tests
+
+extension AppModel {
+    /// True when the selected scheme has tests to run.
+    public var canTestSelection: Bool {
+        !(project?.selectedScheme?.testTargets.isEmpty ?? true)
+    }
+
+    /// Runs the selected scheme's tests on the selected device.
+    /// - Parameter only: limits the run, each entry as "Bundle", "Bundle/Class" or "Bundle/Class/test".
+    public func runTests(only: [String] = []) {
+        guard runBlocker == nil, canTestSelection, let project, let scheme = project.selectedScheme, let device = selectedDevice
+        else { return }
+        tests.start(TestRequest(
+            container: project.container, scheme: scheme.name, configuration: project.selectedConfiguration,
+            device: device, onlyTesting: only
+        ))
+        Task { [weak self] in
+            guard let self else { return }
+            await tests.waitUntilFinished()
+            if !environment.isAppActive(), let notice = RunNotice.make(for: tests) { await environment.notifier.post(notice) }
+        }
+    }
+
+    /// Runs again only the tests that failed in the last run.
+    public func rerunFailedTests() {
+        guard let failed = tests.summary?.failed, !failed.isEmpty else { return }
+        runTests(only: failed.map(\.id))
+    }
+}
+
 // MARK: - Build insight
 
 extension AppModel {

@@ -31,9 +31,15 @@ struct BuildDeskApp: App {
                 Button("Install Last Build") { model.runSelected(.installOnly) }
                     .keyboardShortcut("i")
                     .disabled(model.runBlocker != nil)
-                Button("Stop") { model.run.stop() }
-                    .keyboardShortcut(".")
-                    .disabled(!model.run.isRunning)
+                Button("Run Tests") { model.runTests() }
+                    .keyboardShortcut("u")
+                    .disabled(model.runBlocker != nil || !model.canTestSelection)
+                Button("Stop") {
+                    model.run.stop()
+                    model.tests.stop()
+                }
+                .keyboardShortcut(".")
+                .disabled(!model.run.isRunning && !model.tests.isRunning)
                 Divider()
                 Button("Reload Schemes and Devices") {
                     Task {

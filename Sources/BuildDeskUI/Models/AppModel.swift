@@ -10,6 +10,7 @@ public final class AppModel {
     public let devices: DeviceListModel
     public let run: RunModel
     public let console: ConsoleModel
+    public let tests: TestRunModel
     public internal(set) var recentProjects: [URL]
     /// Why the last attempt to open a project failed, until the next attempt.
     public internal(set) var openError: String?
@@ -59,6 +60,7 @@ public final class AppModel {
         devices = DeviceListModel(discovery: environment.discovery, store: store)
         run = RunModel(builder: environment.builder)
         console = ConsoleModel(service: environment.deviceApps)
+        tests = TestRunModel(tester: environment.tester)
         installRecords = store.installRecords
         launchTexts = store.launchTexts
         recentProjects = store.recentProjects
@@ -167,6 +169,7 @@ public final class AppModel {
     /// Why a run cannot start now, in words for the user; nil when it can.
     public var runBlocker: String? {
         if run.isRunning { return "A build is running." }
+        if tests.isRunning { return "Tests are running." }
         guard project?.selectedScheme != nil else { return "Choose a scheme." }
         guard let device = selectedDevice else { return "Connect a device or choose a simulator." }
         guard device.isReady else { return (device.issue ?? .notConnected).fix(for: device.name) }

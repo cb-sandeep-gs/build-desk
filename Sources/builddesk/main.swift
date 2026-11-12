@@ -110,6 +110,48 @@ func console(_ arguments: Arguments) async throws {
     }
 }
 
+/// Raised when tests ran and some failed, so the tool can exit with its own code.
+struct TestsFailed: Error {}
+
+func test(_ arguments: Arguments) async throws {
+    let container = try arguments.container()
+    let scheme = try arguments.required(CLI.Option.scheme)
+    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    let configuration = try arguments.options[CLI.Option.configuration]
+        ?? ProjectReader().quickSnapshot(of: container).defaultConfiguration
+        ?? BuildDeskConstants.fallbackConfiguration
+    let request = TestRequest(
+        container: container, scheme: scheme, configuration: configuration, device: device,
+        onlyTesting: arguments.options[CLI.Option.only].map { [$0] } ?? []
+    )
+    print("Testing \(scheme) (\(configuration)) on \(device.name)")
+    for try await event in TestRunner().run(request) {
+        switch event {
+        case .testingStarted:
+            print("==> tests")
+        case .caseFinished(let suite, let name, .failed):
+            print("    failed: \(suite).\(name)")
+        case .finished(let summary):
+            try report(summary)
+        case .build, .caseFinished:
+            break
+        }
+    }
+}
+
+func report(_ summary: TestRunSummary) throws {
+    for failed in summary.failed {
+        for failure in failed.failures {
+            let location = failure.file.map { "\($0):\(failure.line ?? 0): " } ?? ""
+            Output.error("\(location)\(failed.suite).\(failed.name): \(failure.message)")
+        }
+    }
+    print("\(summary.count(.passed)) passed, \(summary.count(.failed)) failed, \(summary.count(.skipped)) skipped, "
+        + "\(Output.seconds(summary.seconds)) in total")
+    if let log = summary.logFile { print("full log: \(log.path)") }
+    if !summary.succeeded { throw TestsFailed() }
+}
+
 /// Prints one line per thing worth knowing while a run is in progress.
 func report(_ event: PipelineEvent) {
     switch event {
@@ -147,6 +189,7 @@ func perform(_ command: CLI.Command, _ arguments: Arguments) async throws {
     case .install: try await install(arguments)
     case .uninstall: try await uninstall(arguments)
     case .console: try await console(arguments)
+    case .test: try await test(arguments)
     }
 }
 
@@ -160,6 +203,8 @@ func main() async -> Int32 {
     do {
         try await perform(command, Arguments(raw))
         return 0
+    } catch is TestsFailed {
+        return CLI.ExitCode.testsFailed
     } catch let error as UsageError {
         Output.error("\(error.message)\n\n\(CLI.usage)")
         return CLI.ExitCode.usage

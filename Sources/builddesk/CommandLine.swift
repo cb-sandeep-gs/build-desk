@@ -12,6 +12,7 @@ enum CLI {
         case install
         case uninstall
         case console
+        case test
     }
 
     enum Option {
@@ -22,8 +23,9 @@ enum CLI {
         static let launchArguments = "--launch-args"
         static let launchEnvironment = "--launch-env"
         static let launchURL = "--launch-url"
+        static let only = "--only"
         /// Options that are followed by a value.
-        static let withValue: Set<String> = [scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL]
+        static let withValue: Set<String> = [scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL, only]
     }
 
     enum Flag {
@@ -39,6 +41,8 @@ enum CLI {
     enum ExitCode {
         static let failure: Int32 = 1
         static let usage: Int32 = 64
+        /// Tests ran and some failed.
+        static let testsFailed: Int32 = 2
         /// 128 + SIGINT, what shells report for a command stopped with Ctrl-C.
         static let stopped: Int32 = 130
     }
@@ -56,6 +60,8 @@ enum CLI {
       builddesk install <app-or-ipa> --device <name-or-udid> [--also <name-or-udid>] [--no-launch]
       builddesk uninstall <bundle-id> --device <name-or-udid>
       builddesk console <bundle-id> --device <name-or-udid>
+      builddesk test <project> --scheme <name> --device <name-or-udid>
+                     [--configuration <name>] [--only <Bundle[/Class[/test]]>]
 
     <project> is a .xcodeproj or .xcworkspace.
       --full          also ask xcodebuild for schemes that have no scheme file (slower)

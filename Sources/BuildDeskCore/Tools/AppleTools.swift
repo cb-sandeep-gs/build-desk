@@ -21,6 +21,24 @@ public enum AppleTools {
         ToolCommand(executable: Path.xcodebuild, arguments: buildArguments(request) + ["-showBuildSettings", "-json"])
     }
 
+    /// Builds the scheme and runs its tests, writing the results to `resultBundle`.
+    public static func test(_ request: TestRequest, resultBundle: URL) -> ToolCommand {
+        var arguments = containerArguments(request.container) + [
+            "-scheme", request.scheme,
+            "-configuration", request.configuration,
+            "-destination", "id=\(request.device.id)",
+            "-resultBundlePath", resultBundle.path,
+        ]
+        if request.device.kind == .physical { arguments.append("-allowProvisioningUpdates") }
+        arguments += request.onlyTesting.map { "-only-testing:\($0)" }
+        return ToolCommand(executable: Path.xcodebuild, arguments: arguments + ["test"])
+    }
+
+    /// Prints the tree of tests in a result bundle as JSON.
+    public static func testResults(in resultBundle: URL) -> ToolCommand {
+        xcrun(["xcresulttool", "get", "test-results", "tests", "--path", resultBundle.path])
+    }
+
     // MARK: - devicectl (real devices)
 
     public static func listDevices(jsonOutput: URL) -> ToolCommand {

@@ -21,7 +21,8 @@ extension AppEnvironment {
             source: SourceStateReader(),
             // Without a support folder, history still works for the session.
             history: FileRunHistoryStore.defaultDirectory.map { FileRunHistoryStore(directory: $0) } ?? MemoryRunHistoryStore(),
-            buildFolders: BuildFolderService()
+            buildFolders: BuildFolderService(),
+            tester: TestRunner()
         )
     }
 }
@@ -49,6 +50,8 @@ public enum Demo {
         case installed
         /// An app file waiting for a device to be chosen.
         case appFile
+        /// After a test run with failures.
+        case tested
     }
 
     /// An app model showing the demo project in the given scene.
@@ -88,6 +91,7 @@ public enum Demo {
         case .building: app.runSelected(.buildAndInstall)
         case .installed: app.openConsoleForSelection()
         case .appFile: await app.openDropped(URL(fileURLWithPath: "/Downloads/Harbor.ipa"))
+        case .tested: app.runTests()
         }
         // Let the scripted events arrive.
         try? await Task.sleep(for: .milliseconds(200))
@@ -99,7 +103,7 @@ public enum Demo {
     static let environment = AppEnvironment(
         reader: DemoReader(), discovery: DemoDiscovery(), builder: DemoBuilder(), isXcodeOpen: { false },
         artifacts: DemoDeviceServices(), deviceApps: DemoDeviceServices(),
-        history: MemoryRunHistoryStore(records: history), buildFolders: DemoDeviceServices()
+        history: MemoryRunHistoryStore(records: history), buildFolders: DemoDeviceServices(), tester: DemoTester()
     )
 
     /// Two weeks of made-up runs, with one slow build and one failure.
@@ -230,4 +234,40 @@ private struct DemoDeviceServices: ArtifactReading, DeviceAppManaging, BuildFold
     }
 
     func uninstall(bundleIdentifier: String, from device: Device) async throws {}
+}
+
+/// A finished test run with two failures.
+private struct DemoTester: TestRunning {
+    func run(_ request: TestRequest) -> AsyncThrowingStream<TestEvent, Error> {
+        let suites: [(String, [String])] = [
+            ("CartTests", ["testAddItem", "testRemoveItem", "testTotalWithDiscount", "testEmptyCart"]),
+            ("CatalogTests", ["testLoadsFirstPage", "testSearchFilters", "testSortByPrice"]),
+            ("CheckoutTests", ["testPaysWithSavedCard", "testAddressValidation", "testRetryAfterTimeout"]),
+            ("SessionTests", ["testRestoresSession", "testSignsOut"]),
+        ]
+        let failing: [String: TestCaseResult.Failure] = [
+            "testTotalWithDiscount": .init(
+                message: "XCTAssertEqual failed: (\"18.00\") is not equal to (\"17.10\")",
+                file: "/Projects/Harbor/Tests/CartTests.swift", line: 64
+            ),
+            "testRetryAfterTimeout": .init(
+                message: "Asynchronous wait failed: Exceeded timeout of 5 seconds, with unfulfilled expectations: \"retry\"",
+                file: "/Projects/Harbor/Tests/CheckoutTests.swift", line: 131
+            ),
+        ]
+        let cases = suites.flatMap { suite, names in
+            names.map { name in
+                TestCaseResult(
+                    bundle: "HarborTests", suite: suite, name: name,
+                    status: failing[name] != nil ? .failed : name == "testSignsOut" ? .skipped : .passed,
+                    seconds: 0.2, failures: failing[name].map { [$0] } ?? []
+                )
+            }
+        }
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.testingStarted)
+            continuation.yield(.finished(TestRunSummary(cases: cases, seconds: 64, logFile: nil)))
+            continuation.finish()
+        }
+    }
 }

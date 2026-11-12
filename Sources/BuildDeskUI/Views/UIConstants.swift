@@ -56,6 +56,8 @@ public enum AccessibilityID {
     public static let extraDevices = "extra-devices"
     public static let newWarnings = "new-warnings"
     public static let launchOptions = "launch-options"
+    public static let testButton = "test-button"
+    public static let testResults = "test-results"
     public static let history = "history"
     public static let cleanButton = "clean-button"
     public static let stopButton = "stop-button"

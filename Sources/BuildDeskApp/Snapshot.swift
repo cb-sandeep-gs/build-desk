@@ -18,6 +18,7 @@ enum Snapshot {
         static let menu = "--menu"
         static let installed = "--installed"
         static let sheet = "--sheet"
+        static let tested = "--tested"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -30,6 +31,24 @@ enum Snapshot {
         return arguments[index + 1]
     }
 
+    /// What the picture shows: the welcome screen, a real project, or one of the demo scenes.
+    private static func makeModel(_ arguments: [String]) async -> AppModel {
+        if arguments.contains(Argument.welcome) {
+            return AppModel(environment: .live, store: Demo.scratchStore())
+        } else if let project = value(after: Argument.project, in: arguments) {
+            let model = AppModel(environment: .live, store: Demo.scratchStore())
+            await model.open(URL(fileURLWithPath: project))
+            await model.refreshEnvironment()
+            return model
+        } else if arguments.contains(Argument.sheet) {
+            return await Demo.app(showing: .appFile)
+        } else {
+            let scene: Demo.Scene = arguments.contains(Argument.installed) ? .installed
+                : arguments.contains(Argument.tested) ? .tested : .building
+            return await Demo.app(showing: scene)
+        }
+    }
+
     static func run(arguments: [String]) async -> Int32 {
         guard let output = value(after: Argument.snapshot, in: arguments) else { return EXIT_FAILURE }
         let size = CGSize(
@@ -38,18 +57,7 @@ enum Snapshot {
         )
         NSApplication.shared.setActivationPolicy(.accessory)
 
-        let model: AppModel
-        if arguments.contains(Argument.welcome) {
-            model = AppModel(environment: .live, store: Demo.scratchStore())
-        } else if let project = value(after: Argument.project, in: arguments) {
-            model = AppModel(environment: .live, store: Demo.scratchStore())
-            await model.open(URL(fileURLWithPath: project))
-            await model.refreshEnvironment()
-        } else if arguments.contains(Argument.sheet) {
-            model = await Demo.app(showing: .appFile)
-        } else {
-            model = await Demo.app(showing: arguments.contains(Argument.installed) ? .installed : .building)
-        }
+        let model = await makeModel(arguments)
 
         // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
         // content; the main window in a titled one of the requested size.

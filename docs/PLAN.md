@@ -38,6 +38,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-8 Run tests | Run a scheme's tests, or one class or test, with results per test and a re-run of the failed ones. | Done 2026-11-13 |
 | BD-7 Launch options | Arguments, environment variables and a link for the launch, per scheme and per pin. | Done 2026-11-13 |
 | BD-6 Build insight | Run history, new-warning diff, build-time trend, build folder size with Clean. | Done 2026-11-13 |
 | BD-5 Team-ready | Project settings file, device checks with a fix for each problem, release script (Developer ID, notarization), known gaps closed. | Done 2026-11-13 |
@@ -104,6 +105,23 @@ now stops whatever it was running, so no build or console session is left behind
 
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
+## What BD-8 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Runner | `TestRunner`, `TestRequest`, `TestEvent` | Runs `xcodebuild test` for a scheme on a device or simulator, optionally limited with `-only-testing`. Progress comes from the live output; the results come from the result bundle, which is read once with `xcresulttool` and then deleted. |
+| Results | `TestResultsParser`, `TestCaseResult`, `TestRunSummary` | Every test with its bundle, class, status, time and each failure's message and `file:line`. An expected failure counts as passed. |
+| Window | `TestRunModel`, `TestResultsView` | Run Tests (⌘U) on any scheme that has tests. While running: tests finished so far and the latest one. After: passed, failed and skipped counts, the failures first with their reasons, then every class. Re-run Failed runs only what failed; a right-click runs one test or one class. |
+| Notification | `RunNotice.make(for: TestRunModel)` | When tests end while Build Desk is in the background. |
+
+Tried with the real tools: one test class of a large app on a temporary simulator (5 tests passed, 289 s
+including the build for testing); the result bundle was read and deleted. That run showed `xcodebuild` prints a
+finished test in a second shape when tests run in parallel on simulator clones; the live parser reads both.
+
+`xcodebuild` exits with a failure both when the build breaks and when a test fails; the two are told apart by
+whether the result bundle holds any test. The command line has `builddesk test`, which exits with 2 when tests
+ran and some failed.
 
 ## What BD-7 built
 

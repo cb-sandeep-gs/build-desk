@@ -77,6 +77,7 @@ and dark:
 .build/debug/BuildDeskApp --snapshot menu.png --menu        # the menu bar popover
 .build/debug/BuildDeskApp --snapshot after.png --installed  # last-install line and console
 .build/debug/BuildDeskApp --snapshot sheet.png --sheet      # the app-file sheet
+.build/debug/BuildDeskApp --snapshot tests.png --tested     # test results
 ```
 
 ## Testing against a real project

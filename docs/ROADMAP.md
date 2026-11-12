@@ -1,13 +1,13 @@
 # Build Desk — roadmap
 
 What is left to finish, what to build next, and where the tool could go. Written 2026-11-13, after phases BD-0 to
-BD-5. BD-6 and BD-7 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
+BD-5. BD-6, BD-7 and BD-8 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
 
 ## Where it stands
 
 Build Desk builds any scheme of an Xcode project, installs it on real devices and simulators and launches it, with
 Xcode closed. It has a main window, a menu bar item with one-click pins, a command-line tool, a project settings
-file for teams, a release script, run history with a new-warning diff, a build folder panel and launch options per pin. It has 150 tests.
+file for teams, a release script, run history with a new-warning diff, a build folder panel, launch options per pin and a test runner. It has 163 tests.
 
 | Area | State |
 |---|---|
@@ -58,17 +58,9 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 
 | Phase | What it adds | Size | Depends on |
 |---|---|---|---|
-| BD-8 Run tests | Run a test scheme or one test class and show results per test | M | — |
 | BD-9 Build queue | Several schemes one after another; scheduled builds | M | — |
 | BD-10 Device tools | Screenshot, crash logs, app data folder, unified logs | L | Research |
 | BD-11 Distribution | Auto-update, app icon, checks on push | M | First signed release |
-
-### BD-8 Run tests
-
-- Run a test scheme, or a single test class, on a simulator or device.
-- Show pass and fail per test with the failure message and `file:line`, read from the result bundle that
-  `xcodebuild test` writes (machine-readable, so no log parsing).
-- Re-run only the failed tests.
 
 ### BD-9 Build queue
 
@@ -116,6 +108,5 @@ Larger directions. Each would need its own plan before any code.
 ## 5. Suggested order
 
 1. Finish section 1 "Needs a person": use the app by hand, make the first signed release, move the repository.
-2. BD-8 Run tests.
-3. BD-9 Build queue.
-4. Decide on the questions in section 4, then pick from BD-9 to BD-11 and the potentials.
+2. BD-9 Build queue.
+3. Decide on the questions in section 4, then pick from BD-9 to BD-11 and the potentials.

@@ -117,7 +117,8 @@ enum Sample {
             container: container,
             schemes: [
                 Scheme(name: "SampleKit", buildTargets: [SchemeTarget(name: "SampleKit", productName: "SampleKit.framework")]),
-                Scheme(name: "Sample", buildTargets: [app], runnable: app),
+                Scheme(name: "Sample", buildTargets: [app],
+                       testTargets: [SchemeTarget(name: "SampleTests", productName: "SampleTests.xctest")], runnable: app),
                 Scheme(name: "SampleWatch", buildTargets: [watch], runnable: watch),
                 Scheme(name: "SampleWidget", buildTargets: [widget, app]),
                 Scheme(name: "SampleTests", testTargets: [SchemeTarget(name: "SampleTests", productName: "SampleTests.xctest")]),
@@ -134,6 +135,20 @@ enum Sample {
             configProblem: configProblem
         )
     }
+
+    /// Three tests in two classes: one failed, one skipped.
+    static let testSummary = TestRunSummary(
+        cases: [
+            TestCaseResult(bundle: "SampleTests", suite: "HomeTests", name: "testLoads", status: .passed, seconds: 0.1),
+            TestCaseResult(
+                bundle: "SampleTests", suite: "CartTests", name: "testTotal", status: .failed, seconds: 0.5,
+                failures: [.init(message: "XCTAssertEqual failed", file: "/src/CartTests.swift", line: 64)]
+            ),
+            TestCaseResult(bundle: "SampleTests", suite: "CartTests", name: "testLater", status: .skipped, seconds: 0),
+        ],
+        seconds: 12,
+        logFile: URL(fileURLWithPath: "/logs/tests.log")
+    )
 
     static let deprecation = Diagnostic(severity: .warning, message: "deprecated", file: "/src/Home.swift", line: 4, column: 1)
 
@@ -197,6 +212,24 @@ struct FakeDeviceServices: ArtifactReading, DeviceAppManaging, SourceStateReadin
     }
 
     func state(of folder: URL) async -> SourceState? { source.value }
+}
+
+/// Plays a scripted test run. With `hangs`, it stays running until the consumer stops it.
+struct FakeTester: TestRunning {
+    let requests = Locked<[TestRequest]>([])
+    let events = Locked<[TestEvent]>([])
+    let failure = Locked<BuildDeskError?>(nil)
+    let hangs = Locked(false)
+
+    func run(_ request: TestRequest) -> AsyncThrowingStream<TestEvent, Error> {
+        requests.value += [request]
+        let (events, failure, hangs) = (events.value, failure.value, hangs.value)
+        return AsyncThrowingStream { continuation in
+            events.forEach { continuation.yield($0) }
+            if hangs { return }
+            continuation.finish(throwing: failure)
+        }
+    }
 }
 
 /// A build folder on disk that tests can inspect and fail.
