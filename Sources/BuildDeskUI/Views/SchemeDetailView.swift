@@ -184,6 +184,7 @@ struct SchemeDetailView: View {
                     Spacer()
                     InstalledAppMenu(app: app, scheme: scheme)
                 }
+                LaunchOptionsView(app: app)
             }
             if let message = app.uninstallMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)

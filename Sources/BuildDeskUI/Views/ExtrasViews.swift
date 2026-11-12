@@ -166,6 +166,52 @@ public struct ArtifactInstallSheet: View {
     }
 }
 
+/// Arguments, environment variables and a link for the launch, folded away until needed.
+struct LaunchOptionsView: View {
+    @Bindable var app: AppModel
+    @State private var isExpanded = false
+
+    var body: some View {
+        let texts = app.launchTextsForSelection
+        DisclosureGroup(isExpanded: $isExpanded) {
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Layout.spacing, verticalSpacing: Layout.spacingSmall) {
+                field("Arguments", "-flag value", \.arguments)
+                field("Environment", "NAME=value OTHER=value", \.environment)
+                field("Open link", "myapp://screen", \.url)
+            }
+            .padding(.top, Layout.spacingSmall)
+            if case .failure(let error) = texts.options() {
+                Label(error.message, systemImage: "exclamationmark.triangle.fill").font(.callout).foregroundStyle(.red)
+            }
+        } label: {
+            HStack(spacing: Layout.spacingSmall) {
+                Text("Launch options")
+                // Folded away, a dot says that something is set.
+                if !texts.isEmpty {
+                    Image(systemName: "circle.fill").font(.system(size: Layout.setMarkerSize)).foregroundStyle(.tint)
+                        .accessibilityLabel("set")
+                }
+            }
+        }
+        .disabled(app.run.isRunning)
+        .accessibilityIdentifier(AccessibilityID.launchOptions)
+    }
+
+    private func field(_ title: String, _ prompt: String, _ keyPath: WritableKeyPath<LaunchTexts, String>) -> some View {
+        GridRow {
+            Text(title).foregroundStyle(.secondary).frame(width: Layout.pickerLabelWidth, alignment: .leading)
+            TextField(title, text: Binding(
+                get: { app.launchTextsForSelection[keyPath: keyPath] },
+                set: { app.launchTextsForSelection[keyPath: keyPath] = $0 }
+            ), prompt: Text(prompt))
+            .labelsHidden()
+            .textFieldStyle(.roundedBorder)
+            .font(.body.monospaced())
+            .autocorrectionDisabled()
+        }
+    }
+}
+
 /// "On Test iPhone: installed 2 hours ago · main @ 1a2b3c4 · with local changes".
 struct LastInstallLine: View {
     let record: InstallRecord

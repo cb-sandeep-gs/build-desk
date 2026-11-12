@@ -41,13 +41,13 @@ public final class ConsoleModel {
     public var isVisible: Bool { isRunning || !lines.isEmpty || failure != nil }
 
     /// Launches the app attached to its output. A console that is already running is replaced.
-    public func start(bundleIdentifier: String, on device: Device) {
+    public func start(bundleIdentifier: String, on device: Device, options: LaunchOptions = LaunchOptions()) {
         stop()
         lines = []
         failure = nil
         title = "\(bundleIdentifier) on \(device.name)"
         isRunning = true
-        let output = service.console(bundleIdentifier: bundleIdentifier, on: device)
+        let output = service.console(bundleIdentifier: bundleIdentifier, on: device, options: options)
         task = Task { [weak self] in
             do {
                 for try await line in output { self?.append(line) }

@@ -97,7 +97,7 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
         throw BuildDeskError.unreadableArtifact(path: url.path, reason: "reading app files is not available here")
     }
 
-    public func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error> {
+    public func console(bundleIdentifier: String, on device: Device, options: LaunchOptions) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }
 

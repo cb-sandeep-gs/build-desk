@@ -19,8 +19,11 @@ enum CLI {
         static let device = "--device"
         static let configuration = "--configuration"
         static let also = "--also"
+        static let launchArguments = "--launch-args"
+        static let launchEnvironment = "--launch-env"
+        static let launchURL = "--launch-url"
         /// Options that are followed by a value.
-        static let withValue: Set<String> = [scheme, device, configuration, also]
+        static let withValue: Set<String> = [scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL]
     }
 
     enum Flag {
@@ -60,6 +63,11 @@ enum CLI {
       --build-only    build the scheme and stop (frameworks, compile checks)
       --install-only  install the app the last build left behind, without rebuilding
       --also          a second device of the same kind to install the same build on
+
+    How the app is launched (run, install and console):
+      --launch-args "<args>"      command-line arguments, separated by spaces
+      --launch-env "<N=v N=v>"    environment variables
+      --launch-url <link>         a link the app opens at launch
 
     install puts a built .app or .ipa on a device. console launches an installed app and
     prints what it writes to standard output and error until it exits (Ctrl-C to stop).
@@ -104,6 +112,19 @@ struct Arguments {
     func onlyPositional(_ what: String) throws -> String {
         guard positionals.count == 1 else { throw UsageError(message: "Give one \(what).") }
         return positionals[0]
+    }
+
+    /// What `--launch-args`, `--launch-env` and `--launch-url` add up to.
+    func launchOptions() throws -> LaunchOptions {
+        do {
+            return try LaunchOptions.parse(
+                arguments: options[CLI.Option.launchArguments] ?? "",
+                environment: options[CLI.Option.launchEnvironment] ?? "",
+                url: options[CLI.Option.launchURL] ?? ""
+            )
+        } catch let error as LaunchOptions.ParseError {
+            throw UsageError(message: error.message)
+        }
     }
 
     /// The project path every project command takes as its only positional value.

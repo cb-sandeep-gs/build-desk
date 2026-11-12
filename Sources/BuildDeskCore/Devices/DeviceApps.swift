@@ -96,10 +96,12 @@ public struct DeviceAppService: Sendable {
 
     /// Launches the app attached to its standard output and error. This is what the app prints
     /// (`print`, `NSLog`); unified logging (`os_log`, `Logger`) does not come through here.
-    public func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error> {
+    public func console(
+        bundleIdentifier: String, on device: Device, options: LaunchOptions = LaunchOptions()
+    ) -> AsyncThrowingStream<String, Error> {
         let command = switch device.kind {
-        case .physical: AppleTools.consoleOnDevice(udid: device.id, bundleIdentifier: bundleIdentifier)
-        case .simulator: AppleTools.consoleOnSimulator(udid: device.id, bundleIdentifier: bundleIdentifier)
+        case .physical: AppleTools.consoleOnDevice(udid: device.id, bundleIdentifier: bundleIdentifier, options: options)
+        case .simulator: AppleTools.consoleOnSimulator(udid: device.id, bundleIdentifier: bundleIdentifier, options: options)
         }
         let output = toolRunner.stream(command)
         return AsyncThrowingStream { continuation in

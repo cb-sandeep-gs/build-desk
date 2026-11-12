@@ -180,7 +180,10 @@ struct FakeDeviceServices: ArtifactReading, DeviceAppManaging, SourceStateReadin
         return artifact
     }
 
-    func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error> {
+    let consoleOptions = Locked<[LaunchOptions]>([])
+
+    func console(bundleIdentifier: String, on device: Device, options: LaunchOptions) -> AsyncThrowingStream<String, Error> {
+        consoleOptions.value += [options]
         let (lines, failure) = (consoleLines.value, consoleFailure.value)
         return AsyncThrowingStream { continuation in
             lines.forEach { continuation.yield($0) }

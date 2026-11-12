@@ -18,15 +18,68 @@ public struct PinnedRun: Codable, Equatable, Identifiable, Sendable {
     public let deviceID: String
     /// Kept so the pin can be read while the device is not connected.
     public let deviceName: String
+    /// Arguments, environment variables and a link the app is launched with.
+    public let launchOptions: LaunchOptions
 
-    public var id: String { [project.path, scheme, configuration, deviceID].joined(separator: "|") }
+    /// Launch options are part of what a pin is: the same scheme can be pinned twice, once
+    /// plain and once with a debug flag.
+    public var id: String {
+        [project.path, scheme, configuration, deviceID, launchOptions.argumentsText, launchOptions.environmentText, launchOptions.url ?? ""]
+            .joined(separator: "|")
+    }
 
-    public init(project: URL, scheme: String, configuration: String, deviceID: String, deviceName: String) {
+    public init(
+        project: URL, scheme: String, configuration: String, deviceID: String, deviceName: String,
+        launchOptions: LaunchOptions = LaunchOptions()
+    ) {
         self.project = project
         self.scheme = scheme
         self.configuration = configuration
         self.deviceID = deviceID
         self.deviceName = deviceName
+        self.launchOptions = launchOptions
+    }
+
+    /// Pins saved before launch options existed have none.
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        project = try values.decode(URL.self, forKey: .project)
+        scheme = try values.decode(String.self, forKey: .scheme)
+        configuration = try values.decode(String.self, forKey: .configuration)
+        deviceID = try values.decode(String.self, forKey: .deviceID)
+        deviceName = try values.decode(String.self, forKey: .deviceName)
+        launchOptions = try values.decodeIfPresent(LaunchOptions.self, forKey: .launchOptions) ?? LaunchOptions()
+    }
+}
+
+/// The launch options of a scheme as the person typed them, kept as text so a half-typed value
+/// is not lost.
+public struct LaunchTexts: Codable, Equatable, Sendable {
+    public var arguments = ""
+    public var environment = ""
+    public var url = ""
+
+    public init(arguments: String = "", environment: String = "", url: String = "") {
+        self.arguments = arguments
+        self.environment = environment
+        self.url = url
+    }
+
+    public init(_ options: LaunchOptions) {
+        self.init(arguments: options.argumentsText, environment: options.environmentText, url: options.url ?? "")
+    }
+
+    public var isEmpty: Bool { self == LaunchTexts() }
+
+    /// The options the text describes, or what is wrong with it.
+    public func options() -> Result<LaunchOptions, LaunchOptions.ParseError> {
+        do {
+            return .success(try LaunchOptions.parse(arguments: arguments, environment: environment, url: url))
+        } catch let error as LaunchOptions.ParseError {
+            return .failure(error)
+        } catch {
+            return .failure(LaunchOptions.ParseError(message: error.localizedDescription))
+        }
     }
 }
 

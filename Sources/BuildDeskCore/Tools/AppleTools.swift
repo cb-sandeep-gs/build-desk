@@ -36,14 +36,29 @@ public enum AppleTools {
     }
 
     /// `--terminate-existing` replaces a running copy, so the new build is what opens.
-    public static func launchOnDevice(udid: String, bundleIdentifier: String) -> ToolCommand {
-        xcrun(["devicectl", "device", "process", "launch", "--device", udid, "--terminate-existing", bundleIdentifier])
+    public static func launchOnDevice(udid: String, bundleIdentifier: String, options: LaunchOptions = LaunchOptions()) -> ToolCommand {
+        xcrun(deviceLaunchArguments(udid: udid, bundleIdentifier: bundleIdentifier, options: options, console: false))
     }
 
     /// Launches the app and stays attached, printing what it writes to standard output and
     /// error until it exits.
-    public static func consoleOnDevice(udid: String, bundleIdentifier: String) -> ToolCommand {
-        xcrun(["devicectl", "device", "process", "launch", "--device", udid, "--terminate-existing", "--console", bundleIdentifier])
+    public static func consoleOnDevice(udid: String, bundleIdentifier: String, options: LaunchOptions = LaunchOptions()) -> ToolCommand {
+        xcrun(deviceLaunchArguments(udid: udid, bundleIdentifier: bundleIdentifier, options: options, console: true))
+    }
+
+    private static func deviceLaunchArguments(udid: String, bundleIdentifier: String, options: LaunchOptions, console: Bool) -> [String] {
+        var arguments = ["devicectl", "device", "process", "launch", "--device", udid, "--terminate-existing"]
+        if console { arguments.append("--console") }
+        // devicectl takes the variables as one JSON object; sorted keys keep the command stable.
+        if !options.environment.isEmpty,
+           let json = try? JSONSerialization.data(withJSONObject: options.environment, options: [.sortedKeys]) {
+            arguments += ["--environment-variables", String(decoding: json, as: UTF8.self)]
+        }
+        if let url = options.url, !url.isEmpty { arguments += ["--payload-url", url] }
+        arguments.append(bundleIdentifier)
+        // "--" ends devicectl's own options, so an app argument that starts with a dash is passed on.
+        if !options.arguments.isEmpty { arguments += ["--"] + options.arguments }
+        return arguments
     }
 
     public static func uninstallFromDevice(udid: String, bundleIdentifier: String) -> ToolCommand {
@@ -65,13 +80,27 @@ public enum AppleTools {
         xcrun(["simctl", "install", udid, app.path])
     }
 
-    public static func launchOnSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
-        xcrun(["simctl", "launch", "--terminate-running-process", udid, bundleIdentifier])
+    public static func launchOnSimulator(udid: String, bundleIdentifier: String, options: LaunchOptions = LaunchOptions()) -> ToolCommand {
+        simulatorLaunch(["simctl", "launch", "--terminate-running-process", udid, bundleIdentifier], options)
     }
 
-    public static func consoleOnSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
-        xcrun(["simctl", "launch", "--console", "--terminate-running-process", udid, bundleIdentifier])
+    public static func consoleOnSimulator(udid: String, bundleIdentifier: String, options: LaunchOptions = LaunchOptions()) -> ToolCommand {
+        simulatorLaunch(["simctl", "launch", "--console", "--terminate-running-process", udid, bundleIdentifier], options)
     }
+
+    /// simctl has no option for a link at launch; it is opened right after.
+    public static func openURLOnSimulator(udid: String, url: String) -> ToolCommand {
+        xcrun(["simctl", "openurl", udid, url])
+    }
+
+    /// simctl passes on what follows the bundle identifier as the app's arguments, and every
+    /// variable of its own environment that starts with `SIMCTL_CHILD_`, without the prefix.
+    private static func simulatorLaunch(_ arguments: [String], _ options: LaunchOptions) -> ToolCommand {
+        let environment = Dictionary(uniqueKeysWithValues: options.environment.map { ("\(simulatorChildPrefix)\($0.key)", $0.value) })
+        return ToolCommand(executable: Path.xcrun, arguments: arguments + options.arguments, environment: environment)
+    }
+
+    private static let simulatorChildPrefix = "SIMCTL_CHILD_"
 
     public static func uninstallFromSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
         xcrun(["simctl", "uninstall", udid, bundleIdentifier])

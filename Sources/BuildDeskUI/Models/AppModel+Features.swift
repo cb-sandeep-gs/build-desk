@@ -13,10 +13,31 @@ extension AppModel {
         return installRecords[InstallRecord.key(project: project.container.url, scheme: scheme, deviceID: device.id)]
     }
 
-    /// Opens the console of the app last installed for the selection.
+    /// Opens the console of the app last installed for the selection, started the same way a
+    /// run starts it.
     public func openConsoleForSelection() {
         guard let record = lastInstall, let device = selectedDevice else { return }
-        console.start(bundleIdentifier: record.bundleIdentifier, on: device)
+        let options = (try? launchTextsForSelection.options().get()) ?? LaunchOptions()
+        console.start(bundleIdentifier: record.bundleIdentifier, on: device, options: options)
+    }
+
+    // MARK: Launch options
+
+    static func launchTextsKey(project: URL, scheme: String) -> String {
+        [project.path, scheme].joined(separator: "|")
+    }
+
+    /// The launch options of the selected scheme, as typed. Each scheme keeps its own.
+    public var launchTextsForSelection: LaunchTexts {
+        get {
+            guard let project, let scheme = project.selectedSchemeName else { return LaunchTexts() }
+            return launchTexts[Self.launchTextsKey(project: project.container.url, scheme: scheme)] ?? LaunchTexts()
+        }
+        set {
+            guard let project, let scheme = project.selectedSchemeName else { return }
+            // Nothing typed is no entry, so the stored dictionary does not fill with blanks.
+            launchTexts[Self.launchTextsKey(project: project.container.url, scheme: scheme)] = newValue.isEmpty ? nil : newValue
+        }
     }
 
     /// Removes the app last installed for the selection from the selected device. The caller asks

@@ -14,6 +14,8 @@ public struct BuildRequest: Sendable, Equatable {
     public let installs: Bool
     /// Open the app after installing it.
     public let launches: Bool
+    /// Arguments, environment variables and a link for that launch.
+    public let launchOptions: LaunchOptions
 
     public init(
         container: ProjectContainer,
@@ -23,7 +25,8 @@ public struct BuildRequest: Sendable, Equatable {
         additionalDevices: [Device] = [],
         builds: Bool = true,
         installs: Bool = true,
-        launches: Bool = true
+        launches: Bool = true,
+        launchOptions: LaunchOptions = LaunchOptions()
     ) {
         self.container = container
         self.scheme = scheme
@@ -33,6 +36,7 @@ public struct BuildRequest: Sendable, Equatable {
         self.builds = builds
         self.installs = installs
         self.launches = launches
+        self.launchOptions = launchOptions
     }
 }
 
@@ -73,11 +77,13 @@ public struct InstallRequest: Sendable, Equatable {
     public let artifact: AppArtifact
     public let devices: [Device]
     public let launches: Bool
+    public let launchOptions: LaunchOptions
 
-    public init(artifact: AppArtifact, devices: [Device], launches: Bool = true) {
+    public init(artifact: AppArtifact, devices: [Device], launches: Bool = true, launchOptions: LaunchOptions = LaunchOptions()) {
         self.artifact = artifact
         self.devices = devices
         self.launches = launches
+        self.launchOptions = launchOptions
     }
 }
 

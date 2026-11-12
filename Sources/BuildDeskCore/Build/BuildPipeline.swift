@@ -47,7 +47,8 @@ public struct BuildPipeline: Sendable {
                 do {
                     var seconds: [PipelineStep: Double] = [:]
                     let product = BuiltProduct(appURL: request.artifact.url, bundleIdentifier: request.artifact.bundleIdentifier)
-                    let outcomes = try await deploy(product, to: request.devices, launches: request.launches, &seconds) {
+                    let launch = request.launches ? request.launchOptions : nil
+                    let outcomes = try await deploy(product, to: request.devices, launch: launch, &seconds) {
                         continuation.yield($0)
                     }
                     continuation.yield(.finished(RunSummary(
@@ -94,7 +95,8 @@ public struct BuildPipeline: Sendable {
                 return found
             }
             product = built
-            outcomes = try await deploy(built, to: request.allDevices, launches: request.launches, &seconds, emit)
+            let launch = request.launches ? request.launchOptions : nil
+            outcomes = try await deploy(built, to: request.allDevices, launch: launch, &seconds, emit)
         }
         return RunSummary(
             product: product,
@@ -111,7 +113,7 @@ public struct BuildPipeline: Sendable {
     private func deploy(
         _ product: BuiltProduct,
         to devices: [Device],
-        launches: Bool,
+        launch options: LaunchOptions?,
         _ seconds: inout [PipelineStep: Double],
         _ emit: Emit
     ) async throws -> [DeviceOutcome] {
@@ -122,10 +124,10 @@ public struct BuildPipeline: Sendable {
                 try await attempt(on: device, of: devices, &failures) { try await install(product, on: device) }
             }
         }
-        if launches {
+        if let options {
             try await step(.launch, &seconds, emit) {
                 for device in devices where failures[device.id] == nil {
-                    try await attempt(on: device, of: devices, &failures) { try await launch(product, on: device) }
+                    try await attempt(on: device, of: devices, &failures) { try await launch(product, on: device, options) }
                 }
             }
         }
@@ -221,12 +223,19 @@ public struct BuildPipeline: Sendable {
         }
     }
 
-    private func launch(_ product: BuiltProduct, on device: Device) async throws {
-        let command = switch device.kind {
-        case .physical: AppleTools.launchOnDevice(udid: device.id, bundleIdentifier: product.bundleIdentifier)
-        case .simulator: AppleTools.launchOnSimulator(udid: device.id, bundleIdentifier: product.bundleIdentifier)
+    private func launch(_ product: BuiltProduct, on device: Device, _ options: LaunchOptions) async throws {
+        switch device.kind {
+        case .physical:
+            let command = AppleTools.launchOnDevice(udid: device.id, bundleIdentifier: product.bundleIdentifier, options: options)
+            try await runChecked(command, step: .launch)
+        case .simulator:
+            let command = AppleTools.launchOnSimulator(udid: device.id, bundleIdentifier: product.bundleIdentifier, options: options)
+            try await runChecked(command, step: .launch)
+            // A device takes the link as part of the launch; a simulator needs it as a second step.
+            if let url = options.url, !url.isEmpty {
+                try await runChecked(AppleTools.openURLOnSimulator(udid: device.id, url: url), step: .launch)
+            }
         }
-        try await runChecked(command, step: .launch)
     }
 
     private func runChecked(_ command: ToolCommand, step: PipelineStep) async throws {

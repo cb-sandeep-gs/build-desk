@@ -8,7 +8,7 @@ must be installed but never needs to be running. Signing uses the Apple account 
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
 window (BD-2), the menu bar item (BD-3), the extras (BD-4), what a team needs to share it (BD-5: project
-settings file, device checks, release script) and build insight (BD-6). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
+settings file, device checks, release script), build insight (BD-6) and launch options (BD-7). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
 is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Use the app
@@ -40,6 +40,10 @@ app is and offers the devices it fits.
 **After an install.** Under the scheme name the window shows when it was last installed on the selected device and
 the branch and commit it was built from. The **More** menu opens the app's **console** (what it prints with
 `print` and `NSLog`; unified logging is not included) and can **uninstall** it, after a confirmation.
+
+**Launch options.** Under the buttons, **Launch options** takes command-line arguments, environment variables
+(`NAME=value`, separated by spaces) and a link to open, for example to start the app with a debug flag or on a
+particular screen. Each scheme remembers its own, and a pin keeps the options it was made with.
 
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
@@ -133,6 +137,9 @@ Options of `run`:
 | `--build-only` | Build and stop; for frameworks and compile checks. |
 | `--install-only` | Install the app the last build left behind, without rebuilding. |
 | `--also <name-or-udid>` | A second device of the same kind to install the same build on (also for `install`). |
+| `--launch-args "<args>"` | Command-line arguments for the app (also for `install` and `console`). |
+| `--launch-env "<N=v N=v>"` | Environment variables for the app (also for `install` and `console`). |
+| `--launch-url <link>` | A link the app opens at launch (also for `install` and `console`). |
 
 The build goes into Xcode's normal DerivedData folder, so it is incremental with builds made from Xcode itself.
 The full output of each run is kept in `~/Library/Logs/BuildDesk` (the newest 20 runs).

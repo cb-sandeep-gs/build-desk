@@ -35,6 +35,10 @@ public final class AppModel {
     public internal(set) var uninstallMessage: String?
     /// The selected device, when it is known to be waiting for its passcode.
     public internal(set) var lockedDeviceID: String?
+    /// Launch options per project and scheme, as typed.
+    public internal(set) var launchTexts: [String: LaunchTexts] {
+        didSet { store.launchTexts = launchTexts }
+    }
     /// Past runs of the open project, newest first.
     public internal(set) var history: [RunRecord] = []
     /// Warnings of the last build that no earlier build had; nil when there was nothing to compare with.
@@ -56,6 +60,7 @@ public final class AppModel {
         run = RunModel(builder: environment.builder)
         console = ConsoleModel(service: environment.deviceApps)
         installRecords = store.installRecords
+        launchTexts = store.launchTexts
         recentProjects = store.recentProjects
         launchesAfterInstall = store.launchesAfterInstall
         pins = store.pins
@@ -165,6 +170,8 @@ public final class AppModel {
         guard project?.selectedScheme != nil else { return "Choose a scheme." }
         guard let device = selectedDevice else { return "Connect a device or choose a simulator." }
         guard device.isReady else { return (device.issue ?? .notConnected).fix(for: device.name) }
+        // Launch options that can't be read would start the app differently from what was meant.
+        if case .failure(let error) = launchTextsForSelection.options() { return error.message }
         return nil
     }
 
@@ -182,7 +189,8 @@ public final class AppModel {
             builds: mode != .installOnly,
             // A scheme with no app is built, whatever was asked for.
             installs: mode != .buildOnly && scheme.isInstallable,
-            launches: launchesAfterInstall
+            launches: launchesAfterInstall,
+            launchOptions: (try? launchTextsForSelection.options().get()) ?? LaunchOptions()
         )
         let key = Self.taskCountKey(
             project: request.container.url, scheme: request.scheme, configuration: request.configuration, deviceKind: device.kind
@@ -234,7 +242,8 @@ public final class AppModel {
         guard let project, let scheme = project.selectedScheme, let device = selectedDevice else { return nil }
         return PinnedRun(
             project: project.container.url, scheme: scheme.name, configuration: project.selectedConfiguration,
-            deviceID: device.id, deviceName: device.name
+            deviceID: device.id, deviceName: device.name,
+            launchOptions: (try? launchTextsForSelection.options().get()) ?? LaunchOptions()
         )
     }
 
@@ -269,6 +278,8 @@ public final class AppModel {
         }
         project.selectedSchemeName = pin.scheme
         if project.snapshot?.configurations.contains(pin.configuration) == true { project.selectedConfiguration = pin.configuration }
+        // The pin's launch options become the scheme's, so the window shows what is being run.
+        launchTextsForSelection = LaunchTexts(pin.launchOptions)
         // The device may have been plugged in since the last refresh.
         await devices.refresh()
         devices.selectedDeviceID = pin.deviceID

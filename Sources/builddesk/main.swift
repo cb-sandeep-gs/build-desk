@@ -59,7 +59,8 @@ func run(_ arguments: Arguments) async throws {
         additionalDevices: also,
         builds: !arguments.has(CLI.Flag.installOnly),
         installs: !arguments.has(CLI.Flag.buildOnly),
-        launches: !arguments.has(CLI.Flag.noLaunch)
+        launches: !arguments.has(CLI.Flag.noLaunch),
+        launchOptions: try arguments.launchOptions()
     )
     print("\(scheme) (\(configuration)) → \(device.name)")
 
@@ -85,7 +86,9 @@ func install(_ arguments: Arguments) async throws {
         throw UsageError(message: "\(artifact.name) is \(kind) and can't be installed on \(misfit.name).")
     }
     print("\(artifact.name) \(artifact.version ?? "") (\(artifact.bundleIdentifier)) → \(devices.map(\.name).joined(separator: ", "))")
-    let request = InstallRequest(artifact: artifact, devices: devices, launches: !arguments.has(CLI.Flag.noLaunch))
+    let request = InstallRequest(
+        artifact: artifact, devices: devices, launches: !arguments.has(CLI.Flag.noLaunch), launchOptions: try arguments.launchOptions()
+    )
     for try await event in BuildPipeline().install(request) {
         report(event)
     }
@@ -101,7 +104,8 @@ func uninstall(_ arguments: Arguments) async throws {
 func console(_ arguments: Arguments) async throws {
     let bundleIdentifier = try arguments.onlyPositional("bundle identifier")
     let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
-    for try await line in DeviceAppService().console(bundleIdentifier: bundleIdentifier, on: device) {
+    let options = try arguments.launchOptions()
+    for try await line in DeviceAppService().console(bundleIdentifier: bundleIdentifier, on: device, options: options) {
         print(line)
     }
 }

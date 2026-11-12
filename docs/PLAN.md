@@ -38,6 +38,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-7 Launch options | Arguments, environment variables and a link for the launch, per scheme and per pin. | Done 2026-11-13 |
 | BD-6 Build insight | Run history, new-warning diff, build-time trend, build folder size with Clean. | Done 2026-11-13 |
 | BD-5 Team-ready | Project settings file, device checks with a fix for each problem, release script (Developer ID, notarization), known gaps closed. | Done 2026-11-13 |
 | BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Done 2026-11-13 |
@@ -103,6 +104,17 @@ now stops whatever it was running, so no build or console session is left behind
 
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
+## What BD-7 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Options | `LaunchOptions`, `LaunchTexts` | Command-line arguments, environment variables (`NAME=value`) and a link to open, typed in three fields under Launch options. Text is split as a shell splits it, so quotes keep a value with spaces together. A mistake is explained under the fields and blocks the run. |
+| Per scheme and per pin | `AppModel.launchTextsForSelection`, `PinnedRun.launchOptions` | Each scheme remembers its own options. A pin keeps the options it was made with, so one scheme can be pinned twice: plain, and with a debug flag. |
+| Launch | `AppleTools.launchOnDevice`, `launchOnSimulator`, `openURLOnSimulator` | On a device everything goes in one `devicectl` launch. On a simulator the variables travel through the tool's environment and the link is opened right after the launch. The console starts the app the same way. |
+
+The command line takes the same options: `--launch-args`, `--launch-env` and `--launch-url` on `run`, `install`
+and `console`. Tried on a wired iPhone: the installed app was relaunched with an argument and a variable.
 
 ## What BD-6 built
 

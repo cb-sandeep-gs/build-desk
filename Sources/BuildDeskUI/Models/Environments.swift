@@ -58,7 +58,8 @@ public enum Demo {
         store.pins = [
             PinnedRun(project: projectURL, scheme: "Harbor", configuration: "Debug", deviceID: "DEMO-PHONE", deviceName: "Harbor iPhone"),
             PinnedRun(project: projectURL, scheme: "Harbor Staging", configuration: "Staging", deviceID: "DEMO-SIM",
-                      deviceName: "iPhone 17 Pro"),
+                      deviceName: "iPhone 17 Pro",
+                      launchOptions: LaunchOptions(arguments: ["-skipOnboarding"], environment: ["API_HOST": "staging.example.com"])),
             PinnedRun(project: projectURL, scheme: "Harbor", configuration: "Release", deviceID: "DEMO-PAD", deviceName: "Test iPad"),
         ]
         // As if this scheme had been built before, so the progress bar has something to measure against.
@@ -66,6 +67,11 @@ public enum Demo {
             previousTaskCount,
             for: AppModel.taskCountKey(project: projectURL, scheme: "Harbor", configuration: "Debug", deviceKind: .physical)
         )
+        store.launchTexts = [
+            AppModel.launchTextsKey(project: projectURL, scheme: "Harbor"): LaunchTexts(
+                arguments: "-skipOnboarding -logLevel debug", environment: "API_HOST=staging.example.com", url: "harbor://cart"
+            ),
+        ]
         if scene == .installed {
             store.installRecords = [
                 InstallRecord.key(project: projectURL, scheme: "Harbor", deviceID: "DEMO-PHONE"): InstallRecord(
@@ -210,7 +216,7 @@ private struct DemoDeviceServices: ArtifactReading, DeviceAppManaging, BuildFold
     }
 
     /// Prints a few lines and then stays attached, like an app that is running.
-    func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error> {
+    func console(bundleIdentifier: String, on device: Device, options: LaunchOptions) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             [
                 "Harbor 4.2 (812) launched",

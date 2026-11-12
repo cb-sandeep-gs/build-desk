@@ -37,7 +37,7 @@ public protocol ArtifactReading: Sendable {
 public protocol DeviceAppManaging: Sendable {
     /// Launches the app and delivers what it prints, line by line, until it exits or the
     /// consumer stops.
-    func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error>
+    func console(bundleIdentifier: String, on device: Device, options: LaunchOptions) -> AsyncThrowingStream<String, Error>
     func uninstall(bundleIdentifier: String, from device: Device) async throws
 }
 

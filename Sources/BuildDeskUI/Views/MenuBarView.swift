@@ -130,6 +130,13 @@ private struct PinRow: View {
 
     private var isReady: Bool { device?.isReady == true }
 
+    /// "Debug · Test iPhone", with what is special about this pin or wrong with its device.
+    private var subtitle: String {
+        var parts = [pin.configuration, pin.deviceName]
+        if !pin.launchOptions.isEmpty { parts.append("launch options") }
+        return parts.joined(separator: " · ") + (isReady ? "" : " — \((device?.issue ?? .notConnected).title)")
+    }
+
     var body: some View {
         HStack(spacing: Layout.spacingSmall) {
             Image(systemName: device?.symbol ?? "iphone.slash")
@@ -137,7 +144,7 @@ private struct PinRow: View {
                 .frame(width: Layout.iconColumnWidth)
             VStack(alignment: .leading, spacing: 1) {
                 Text(pin.scheme).lineLimit(1).truncationMode(.middle)
-                Text("\(pin.configuration) · \(pin.deviceName)\(isReady ? "" : " — \((device?.issue ?? .notConnected).title)")")
+                Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

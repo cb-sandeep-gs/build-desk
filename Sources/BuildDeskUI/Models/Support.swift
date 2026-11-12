@@ -82,6 +82,7 @@ public final class PreferenceStore {
         static let taskCounts = "taskCounts"
         static let pins = "pins"
         static let installRecords = "installRecords"
+        static let launchTexts = "launchTexts"
     }
 
     /// How many recently opened projects are remembered.
@@ -141,6 +142,12 @@ public final class PreferenceStore {
             defaults.data(forKey: Key.installRecords).flatMap { try? JSONDecoder().decode([String: InstallRecord].self, from: $0) } ?? [:]
         }
         set { defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.installRecords) }
+    }
+
+    /// Launch options per project and scheme, as typed.
+    public var launchTexts: [String: LaunchTexts] {
+        get { defaults.data(forKey: Key.launchTexts).flatMap { try? JSONDecoder().decode([String: LaunchTexts].self, from: $0) } ?? [:] }
+        set { defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.launchTexts) }
     }
 
     private func dictionary(_ key: String) -> [String: String] {
