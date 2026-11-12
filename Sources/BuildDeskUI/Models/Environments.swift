@@ -18,7 +18,10 @@ extension AppEnvironment {
             isAppActive: { NSApp?.isActive ?? false },
             artifacts: ArtifactReader(),
             deviceApps: DeviceAppService(),
-            source: SourceStateReader()
+            source: SourceStateReader(),
+            // Without a support folder, history still works for the session.
+            history: FileRunHistoryStore.defaultDirectory.map { FileRunHistoryStore(directory: $0) } ?? MemoryRunHistoryStore(),
+            buildFolders: BuildFolderService()
         )
     }
 }
@@ -89,8 +92,26 @@ public enum Demo {
 
     static let environment = AppEnvironment(
         reader: DemoReader(), discovery: DemoDiscovery(), builder: DemoBuilder(), isXcodeOpen: { false },
-        artifacts: DemoDeviceServices(), deviceApps: DemoDeviceServices()
+        artifacts: DemoDeviceServices(), deviceApps: DemoDeviceServices(),
+        history: MemoryRunHistoryStore(records: history), buildFolders: DemoDeviceServices()
     )
+
+    /// Two weeks of made-up runs, with one slow build and one failure.
+    static let history: [RunRecord] = {
+        let buildSeconds: [Double] = [212, 38, 41, 35, 198, 44, 39, 52, 47, 301, 43, 40]
+        let day: TimeInterval = 24 * 60 * 60
+        return buildSeconds.enumerated().map { index, seconds in
+            let age = Double(buildSeconds.count - index) * day + lastInstallAge
+            let failed = index == buildSeconds.count - 3
+            return RunRecord(
+                date: Date().addingTimeInterval(-age), projectPath: projectURL.path, scheme: "Harbor", configuration: "Debug",
+                deviceName: "Harbor iPhone", deviceKind: .physical, action: .buildAndInstall, result: failed ? .failed : .succeeded,
+                totalSeconds: seconds + 14, buildSeconds: failed ? nil : seconds, taskCount: 640, warningCount: 18,
+                newWarningCount: index == buildSeconds.count - 1 ? 2 : 0, errorCount: failed ? 1 : 0,
+                source: SourceState(branch: "feature/checkout", commit: "1a2b3c4", hasLocalChanges: index % 3 == 0)
+            )
+        }
+    }()
 
     static let devices: [Device] = [
         Device(id: "DEMO-PHONE", name: "Harbor iPhone", model: "iPhone 17", platform: "iOS", osVersion: "27.2",
@@ -173,7 +194,15 @@ private struct DemoBuilder: BuildRunning {
 }
 
 /// A made-up app file and console output.
-private struct DemoDeviceServices: ArtifactReading, DeviceAppManaging {
+private struct DemoDeviceServices: ArtifactReading, DeviceAppManaging, BuildFolderManaging {
+    private static let buildBytes: Int64 = 4_630_000_000
+
+    func buildFolder(for container: ProjectContainer) async -> BuildFolder? {
+        BuildFolder(url: URL(fileURLWithPath: "/Users/you/Library/Developer/Xcode/DerivedData/Harbor-demo"), buildBytes: Self.buildBytes)
+    }
+
+    func clean(_ folder: BuildFolder) async throws {}
+
     func read(_ url: URL) async throws -> AppArtifact {
         AppArtifact(
             url: url, bundleIdentifier: "com.example.harbor", name: "Harbor", version: "4.2", platform: .iOS, isSimulatorBuild: false

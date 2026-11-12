@@ -93,6 +93,11 @@ public enum AppleTools {
         ToolCommand(executable: Path.git, arguments: ["-C", folder.path] + arguments)
     }
 
+    /// The size of a folder on disk, in kilobytes, as one line.
+    public static func diskUsage(of folder: URL) -> ToolCommand {
+        ToolCommand(executable: Path.diskUsage, arguments: ["-sk", folder.path])
+    }
+
     // MARK: - Shared
 
     private static func xcrun(_ arguments: [String]) -> ToolCommand {

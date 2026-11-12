@@ -1,13 +1,13 @@
 # Build Desk — roadmap
 
 What is left to finish, what to build next, and where the tool could go. Written 2026-11-13, after phases BD-0 to
-BD-5. What is already built is described in [PLAN.md](PLAN.md).
+BD-5. BD-6 has been built since and is described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
 
 ## Where it stands
 
 Build Desk builds any scheme of an Xcode project, installs it on real devices and simulators and launches it, with
 Xcode closed. It has a main window, a menu bar item with one-click pins, a command-line tool, a project settings
-file for teams and a release script. The core has 121 tests.
+file for teams, a release script, run history with a new-warning diff and a build folder panel. It has 137 tests.
 
 | Area | State |
 |---|---|
@@ -49,7 +49,6 @@ These paths are covered by tests against fakes only.
 | Console shows standard output only | `os_log` and `Logger` output is missing. | Needs research; see section 4. |
 | First build of a scheme has no measured progress | A busy bar until one build has finished. | Estimate from the number of source files, or from another configuration's count. |
 | An iOS version newer than Xcode supports is not detected | The build fails with Xcode's own message. | Compare the device's version with the installed Xcode's device support. |
-| Cleaning the build folder disables Install Last Build | The button reports "no built copy" until the next build. | The disk panel in BD-6 makes this visible and deliberate. |
 | No app icon | The app shows the generic icon in the Dock and Finder. | Add an icon set to the bundle script. |
 | No checks on push | Tests and lint run only when someone runs them. | A GitHub Actions workflow: `swift build`, `swift test`, `swiftlint lint --strict`. |
 
@@ -59,24 +58,11 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 
 | Phase | What it adds | Size | Depends on |
 |---|---|---|---|
-| BD-6 Build insight | History of runs, new-warning diff, build time trend, disk panel | M | — |
 | BD-7 Launch options | Launch arguments, environment variables and a deep link per pin | S | — |
 | BD-8 Run tests | Run a test scheme or one test class and show results per test | M | — |
-| BD-9 Build queue | Several schemes one after another; scheduled builds | M | BD-6 |
+| BD-9 Build queue | Several schemes one after another; scheduled builds | M | — |
 | BD-10 Device tools | Screenshot, crash logs, app data folder, unified logs | L | Research |
 | BD-11 Distribution | Auto-update, app icon, checks on push | M | First signed release |
-
-### BD-6 Build insight
-
-Things Xcode does not show.
-
-- **Run history:** every run with scheme, device, duration per step, warning count, branch and commit. Kept as a
-  small local file per project, with a limit on its size.
-- **New-warning diff:** "3 new warnings since the last build" with `file:line`, instead of the same several hundred
-  every time. The diagnostics are already parsed and de-duplicated; this needs them stored per run.
-- **Build time trend:** duration per scheme over the last runs, so a slow-down is noticed when it starts.
-- **Disk panel:** the size of the project's build folder and a Clean button behind a confirmation. Replaces
-  cleaning by hand and says plainly that the next build will be a full one.
 
 ### BD-7 Launch options
 
@@ -132,12 +118,12 @@ Larger directions. Each would need its own plan before any code.
 | Is one dependency acceptable for auto-update? | BD-11 | The package has no dependencies today. |
 | Where should archive and upload live? | Potentials | In Build Desk, or in the tooling that already handles releases. |
 | Which chat or status system would shared build status post to? | Potentials | Decides the format and the credentials needed. |
-| How long should run history be kept, and is it per person or shared? | BD-6 | Per person is simple and private; shared needs a place to store it. |
+| Should run history be shared by a team? | Shared build status | It is per person today (the newest 500 runs, on that Mac). Sharing needs a place to store it. |
 
 ## 5. Suggested order
 
 1. Finish section 1 "Needs a person": use the app by hand, make the first signed release, move the repository.
-2. BD-6 Build insight: the most useful addition for daily work, and BD-9 builds on it.
-3. BD-7 Launch options: small, and makes pins much more useful.
-4. BD-8 Run tests.
+2. BD-7 Launch options: small, and makes pins much more useful.
+3. BD-8 Run tests.
+4. BD-9 Build queue.
 5. Decide on the questions in section 4, then pick from BD-9 to BD-11 and the potentials.

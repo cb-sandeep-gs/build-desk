@@ -90,7 +90,7 @@ public struct InstallRecord: Codable, Equatable, Sendable {
 
 /// Services that do nothing. The default for the parts of the environment a test or the demo
 /// does not care about.
-public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateReading {
+public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateReading, BuildFolderManaging {
     public init() {}
 
     public func read(_ url: URL) async throws -> AppArtifact {
@@ -104,4 +104,8 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
     public func uninstall(bundleIdentifier: String, from device: Device) async throws {}
 
     public func state(of folder: URL) async -> SourceState? { nil }
+
+    public func buildFolder(for container: ProjectContainer) async -> BuildFolder? { nil }
+
+    public func clean(_ folder: BuildFolder) async throws {}
 }

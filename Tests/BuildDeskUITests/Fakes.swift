@@ -135,10 +135,12 @@ enum Sample {
         )
     }
 
+    static let deprecation = Diagnostic(severity: .warning, message: "deprecated", file: "/src/Home.swift", line: 4, column: 1)
+
     static let summary = RunSummary(
         product: BuiltProduct(appURL: URL(fileURLWithPath: "/derived/Sample.app"), bundleIdentifier: "com.example.sample"),
         taskCount: 3,
-        warnings: [],
+        warnings: [deprecation],
         secondsByStep: [.build: 2],
         logFile: URL(fileURLWithPath: "/logs/run.log")
     )
@@ -192,6 +194,23 @@ struct FakeDeviceServices: ArtifactReading, DeviceAppManaging, SourceStateReadin
     }
 
     func state(of folder: URL) async -> SourceState? { source.value }
+}
+
+/// A build folder on disk that tests can inspect and fail.
+struct FakeBuildFolders: BuildFolderManaging {
+    let bytes = Locked<Int64?>(4_500_000_000)
+    let cleaned = Locked(0)
+    let failure = Locked<BuildDeskError?>(nil)
+
+    func buildFolder(for container: ProjectContainer) async -> BuildFolder? {
+        BuildFolder(url: URL(fileURLWithPath: "/derived/Sample-abcd"), buildBytes: bytes.value)
+    }
+
+    func clean(_ folder: BuildFolder) async throws {
+        if let failure = failure.value { throw failure }
+        cleaned.value += 1
+        bytes.value = nil
+    }
 }
 
 /// Preferences that live only for one test.

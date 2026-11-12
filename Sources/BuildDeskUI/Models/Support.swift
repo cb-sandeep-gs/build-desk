@@ -33,6 +33,10 @@ public struct AppEnvironment: Sendable {
     public let deviceApps: any DeviceAppManaging
     /// Branch and commit of a project's checkout.
     public let source: any SourceStateReading
+    /// Past runs and the warnings already seen.
+    public let history: any RunHistoryStoring
+    /// The project's build output on disk.
+    public let buildFolders: any BuildFolderManaging
 
     public init(
         reader: any ProjectReading,
@@ -43,7 +47,9 @@ public struct AppEnvironment: Sendable {
         isAppActive: @escaping @MainActor @Sendable () -> Bool = { true },
         artifacts: any ArtifactReading = InertServices(),
         deviceApps: any DeviceAppManaging = InertServices(),
-        source: any SourceStateReading = InertServices()
+        source: any SourceStateReading = InertServices(),
+        history: any RunHistoryStoring = MemoryRunHistoryStore(),
+        buildFolders: any BuildFolderManaging = InertServices()
     ) {
         self.reader = reader
         self.discovery = discovery
@@ -54,6 +60,8 @@ public struct AppEnvironment: Sendable {
         self.artifacts = artifacts
         self.deviceApps = deviceApps
         self.source = source
+        self.history = history
+        self.buildFolders = buildFolders
     }
 }
 

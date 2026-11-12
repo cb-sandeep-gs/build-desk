@@ -7,8 +7,8 @@ Build Desk drives the command-line tools that ship inside Xcode (`xcodebuild`, `
 must be installed but never needs to be running. Signing uses the Apple account already saved in Xcode.
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
-window (BD-2), the menu bar item (BD-3), the extras (BD-4) and what a team needs to share it (BD-5: project
-settings file, device checks, release script). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
+window (BD-2), the menu bar item (BD-3), the extras (BD-4), what a team needs to share it (BD-5: project
+settings file, device checks, release script) and build insight (BD-6). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
 is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Use the app
@@ -40,6 +40,13 @@ app is and offers the devices it fits.
 **After an install.** Under the scheme name the window shows when it was last installed on the selected device and
 the branch and commit it was built from. The **More** menu opens the app's **console** (what it prints with
 `print` and `NSLog`; unified logging is not included) and can **uninstall** it, after a confirmation.
+
+**History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
+they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
+build of that scheme had.
+
+**Build folder.** The bottom of the window shows how much disk the project's build output takes. **Clean…**
+deletes it after a confirmation; the next build is then a full one.
 
 **Menu bar.** Press **Pin** in the window to keep the current scheme, configuration and device in the menu bar.
 The hammer icon there opens a list of your pins, each with a one-click build and install, plus the progress of

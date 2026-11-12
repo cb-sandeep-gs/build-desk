@@ -6,38 +6,48 @@ import Observation
 @MainActor
 @Observable
 public final class AppModel {
-    public private(set) var project: ProjectModel?
+    public internal(set) var project: ProjectModel?
     public let devices: DeviceListModel
     public let run: RunModel
     public let console: ConsoleModel
-    public private(set) var recentProjects: [URL]
+    public internal(set) var recentProjects: [URL]
     /// Why the last attempt to open a project failed, until the next attempt.
-    public private(set) var openError: String?
-    public private(set) var isXcodeOpen = false
+    public internal(set) var openError: String?
+    public internal(set) var isXcodeOpen = false
     public var launchesAfterInstall: Bool {
         didSet { store.launchesAfterInstall = launchesAfterInstall }
     }
     /// Scheme and device pairs shown in the menu bar.
-    public private(set) var pins: [PinnedRun] {
+    public internal(set) var pins: [PinnedRun] {
         didSet { store.pins = pins }
     }
     /// Why the last pin could not be run, until the next attempt.
-    public private(set) var pinError: String?
+    public internal(set) var pinError: String?
     /// More devices to install the same build on, beside the selected one.
     public var extraDeviceIDs: Set<String> = []
     /// The last install of each scheme on each device.
-    public private(set) var installRecords: [String: InstallRecord] {
+    public internal(set) var installRecords: [String: InstallRecord] {
         didSet { store.installRecords = installRecords }
     }
     /// An app file the user dropped or chose, waiting for a device to be picked.
-    public private(set) var pendingArtifact: AppArtifact?
+    public internal(set) var pendingArtifact: AppArtifact?
     /// The result of the last uninstall, or why it failed, until the next one.
-    public private(set) var uninstallMessage: String?
+    public internal(set) var uninstallMessage: String?
     /// The selected device, when it is known to be waiting for its passcode.
-    public private(set) var lockedDeviceID: String?
+    public internal(set) var lockedDeviceID: String?
+    /// Past runs of the open project, newest first.
+    public internal(set) var history: [RunRecord] = []
+    /// Warnings of the last build that no earlier build had; nil when there was nothing to compare with.
+    public internal(set) var newWarnings: [Diagnostic]?
+    /// The open project's build output on disk; nil when it has never been built here.
+    public internal(set) var buildFolder: BuildFolder?
+    public internal(set) var isCleaningBuildFolder = false
+    /// The result of the last clean, or why it was not done, until the next one.
+    public internal(set) var buildFolderMessage: String?
 
-    private let environment: AppEnvironment
-    private let store: PreferenceStore
+    // Internal, not private: the model's features are split across files as extensions.
+    let environment: AppEnvironment
+    let store: PreferenceStore
 
     public init(environment: AppEnvironment, store: PreferenceStore = PreferenceStore()) {
         self.environment = environment
@@ -77,7 +87,10 @@ public final class AppModel {
             extraDeviceIDs = []
             store.noteOpened(container.url)
             recentProjects = store.recentProjects
+            newWarnings = nil
+            buildFolderMessage = nil
             await model.load()
+            await reloadInsight(for: container)
         } catch {
             openError = userMessage(for: error)
         }
@@ -174,6 +187,7 @@ public final class AppModel {
         let key = Self.taskCountKey(
             project: request.container.url, scheme: request.scheme, configuration: request.configuration, deviceKind: device.kind
         )
+        newWarnings = nil
         run.start(request, expectedTaskCount: store.taskCount(for: key))
         Task { [weak self] in
             guard let self else { return }
@@ -185,6 +199,7 @@ public final class AppModel {
             // Remember how big this build was, to estimate the next one's progress.
             if run.phase == .succeeded, run.taskCount > 0 { store.setTaskCount(run.taskCount, for: key) }
             recordInstalls(of: request, source: builtFrom)
+            await recordRun(of: request, source: builtFrom)
             await announceIfInBackground()
         }
     }
@@ -202,7 +217,7 @@ public final class AppModel {
     }
 
     /// Someone looking at the window has already seen the result.
-    private func announceIfInBackground() async {
+    func announceIfInBackground() async {
         if !environment.isAppActive(), let notice = RunNotice.make(for: run) { await environment.notifier.post(notice) }
     }
 
@@ -263,58 +278,5 @@ public final class AppModel {
             return
         }
         runSelected(.buildAndInstall)
-    }
-}
-
-// MARK: - Installed apps
-
-extension AppModel {
-    /// What Build Desk last installed for the selected scheme on the selected device.
-    public var lastInstall: InstallRecord? {
-        guard let project, let scheme = project.selectedSchemeName, let device = selectedDevice else { return nil }
-        return installRecords[InstallRecord.key(project: project.container.url, scheme: scheme, deviceID: device.id)]
-    }
-
-    /// Opens the console of the app last installed for the selection.
-    public func openConsoleForSelection() {
-        guard let record = lastInstall, let device = selectedDevice else { return }
-        console.start(bundleIdentifier: record.bundleIdentifier, on: device)
-    }
-
-    /// Removes the app last installed for the selection from the selected device. The caller asks
-    /// the user to confirm first.
-    public func uninstallSelection() async {
-        guard let project, let scheme = project.selectedSchemeName, let record = lastInstall, let device = selectedDevice else { return }
-        do {
-            try await environment.deviceApps.uninstall(bundleIdentifier: record.bundleIdentifier, from: device)
-            installRecords[InstallRecord.key(project: project.container.url, scheme: scheme, deviceID: device.id)] = nil
-            uninstallMessage = "Removed \(scheme) from \(device.name)."
-        } catch {
-            uninstallMessage = userMessage(for: error)
-        }
-    }
-
-    // MARK: App files
-
-    /// Ready devices the waiting app file can go on.
-    public var devicesForPendingArtifact: [Device] {
-        guard let artifact = pendingArtifact else { return [] }
-        return devices.devices.filter { $0.isReady && artifact.fits($0) }
-    }
-
-    /// Installs the waiting app file on the chosen devices.
-    public func installPendingArtifact(on deviceIDs: Set<String>) {
-        guard let artifact = pendingArtifact, !run.isRunning else { return }
-        let targets = devicesForPendingArtifact.filter { deviceIDs.contains($0.id) }
-        guard !targets.isEmpty else { return }
-        run.start(InstallRequest(artifact: artifact, devices: targets, launches: launchesAfterInstall))
-        Task { [weak self] in
-            await self?.run.waitUntilFinished()
-            await self?.announceIfInBackground()
-        }
-    }
-
-    public func dismissPendingArtifact() {
-        pendingArtifact = nil
     }
 }

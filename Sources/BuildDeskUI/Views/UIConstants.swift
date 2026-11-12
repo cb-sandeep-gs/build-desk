@@ -18,6 +18,10 @@ public enum Layout {
     public static let sheetWidth: CGFloat = 460
     static let consoleHeight: CGFloat = 220
     static let consoleFilterWidth: CGFloat = 160
+    static let trendHeight: CGFloat = 64
+    /// Builds shown in the build-time trend, and runs listed under it.
+    static let trendRunCount = 30
+    static let historyRowCount = 6
 
     static let spacingSmall: CGFloat = 6
     static let spacing: CGFloat = 12
@@ -49,6 +53,9 @@ public enum AccessibilityID {
     public static let console = "console"
     public static let moreMenu = "more-menu"
     public static let extraDevices = "extra-devices"
+    public static let newWarnings = "new-warnings"
+    public static let history = "history"
+    public static let cleanButton = "clean-button"
     public static let stopButton = "stop-button"
     public static let launchToggle = "launch-toggle"
     public static let runStatus = "run-status"

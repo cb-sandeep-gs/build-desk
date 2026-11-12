@@ -15,8 +15,11 @@ struct SchemeDetailView: View {
                     destination(scheme)
                     actions(scheme)
                     RunProgressView(run: app.run)
+                    if app.run.phase == .succeeded { NewWarningsView(newWarnings: app.newWarnings) }
                     ConsoleView(console: app.console)
                     targets(scheme)
+                    HistoryView(records: app.historyForSelectedScheme)
+                    BuildFolderView(app: app)
                 }
                 .frame(maxWidth: Layout.detailMaxWidth, alignment: .leading)
                 .padding(Layout.spacingLarge)

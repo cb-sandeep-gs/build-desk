@@ -38,6 +38,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-6 Build insight | Run history, new-warning diff, build-time trend, build folder size with Clean. | Done 2026-11-13 |
 | BD-5 Team-ready | Project settings file, device checks with a fix for each problem, release script (Developer ID, notarization), known gaps closed. | Done 2026-11-13 |
 | BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Done 2026-11-13 |
 
@@ -102,6 +103,19 @@ now stops whatever it was running, so no build or console session is left behind
 
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
+## What BD-6 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Run history | `RunRecord`, `FileRunHistoryStore` | Every run from the app is recorded: scheme, configuration, device, what was done, result, time per build and in total, tasks, warnings, errors, branch and commit. Kept in `~/Library/Application Support/BuildDesk/history.json`, newest 500. Shown per scheme under History. |
+| New-warning diff | `WarningDiff`, `Diagnostic.fingerprint` | After a build, the warnings no earlier build of that scheme and configuration had, with `file:line`. A warning is identified by its file and message, not its line, so it stays "known" when code above it moves. |
+| Build-time trend | `HistoryView` | One bar per successful build, so a build that starts taking longer stands out. |
+| Build folder | `BuildFolderService`, `BuildFolderView` | Finds the project's folder in Xcode's DerivedData (by the project path Xcode records in it), shows the size of its build output, and deletes that output behind a confirmation. Refused while Xcode is open or a build runs. Packages and the index are kept. |
+
+How "new" is decided: the set of known warnings only grows. An incremental build prints warnings only for the
+files it recompiled, so a warning missing from one build has not necessarily been fixed. The cost is that a
+warning which is fixed and later comes back is not flagged as new.
 
 ## What BD-5 built
 
