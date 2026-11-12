@@ -1,0 +1,18 @@
+# Build Desk lint rules. Run: swiftlint lint --strict
+included:
+  - Sources
+  - Tests
+excluded:
+  - .build
+line_length:
+  warning: 140
+  error: 160
+  ignores_comments: true
+identifier_name:
+  # Argument labels that read as English in Swift ("from:to:", "at:"), plus "id".
+  excluded: [id, to, at, of]
+disabled_rules:
+  # Trailing commas keep multi-line literals diff-friendly (same style as Package.swift).
+  - trailing_comma
+  # Tool output is bytes; String(decoding:as:) repairs invalid UTF-8 instead of dropping a line, on purpose.
+  - optional_data_string_conversion

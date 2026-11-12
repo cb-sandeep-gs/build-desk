@@ -11,7 +11,9 @@ and docs.
 - **Clear boundaries:** project reading, device discovery, build running and output parsing are separate types
   behind protocols, so each is testable without Xcode or a device.
 - **Apple tools only through one client.** argv lists only, never a shell string. Parse machine-readable output
-  (`-json`, `--json-output`) only, never human-readable text.
+  (`-json`, `--json-output`) only, never human-readable text. The one exception is build progress
+  (`BuildOutputParser`): a build has no machine-readable output, so it recognises a few long-standing line shapes
+  and treats every other line as not an event.
 - **Nothing project-specific in code.** Project differences belong in `.builddesk.json` at that project's root.
   When a config key changes, update the type, its validation, the schema and the README table together.
 - **No duplication:** shared logic goes into one helper or type; prefer composition and protocols over copy-paste.
