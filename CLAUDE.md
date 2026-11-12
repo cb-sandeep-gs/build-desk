@@ -42,6 +42,9 @@ and docs.
   is never automatic. Never uninstall a real app from a user's device to test; use the error path or a fake.
 - **What comes off a device is the user's data.** Screenshots, app data and crash logs fetched for a check go to
   the scratch folder and are deleted when the check is done; they never go in the repository.
+- **Release actions belong to the project.** Build Desk runs the project's own release commands (the release
+  contract, `docs/release-contract.md`); it never tags, pushes or talks to a store itself. A provider's `run` is
+  called only from a plan the person confirmed, and never to test: check `status` and `plan` only.
 - **Git is read-only.** Build Desk reads the branch and commit of a checkout and never changes it.
 
 ## Performance and memory

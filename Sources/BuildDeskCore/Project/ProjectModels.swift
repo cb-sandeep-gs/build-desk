@@ -179,6 +179,8 @@ public struct ProjectSnapshot: Sendable, Equatable, Codable {
     public let config: ProjectConfig
     /// What is wrong with the project's `.builddesk.json`, when something is.
     public let configProblem: String?
+    /// The folder that holds the project's `.builddesk.json`; nil when it has none.
+    public let configFolder: URL?
 
     public init(
         container: ProjectContainer,
@@ -187,7 +189,8 @@ public struct ProjectSnapshot: Sendable, Equatable, Codable {
         configurations: [String],
         defaultConfiguration: String?,
         config: ProjectConfig = ProjectConfig(),
-        configProblem: String? = nil
+        configProblem: String? = nil,
+        configFolder: URL? = nil
     ) {
         self.container = container
         self.schemes = schemes
@@ -196,6 +199,13 @@ public struct ProjectSnapshot: Sendable, Equatable, Codable {
         self.defaultConfiguration = defaultConfiguration
         self.config = config
         self.configProblem = configProblem
+        self.configFolder = configFolder
+    }
+
+    /// The project's release commands and where to run them; nil when it has no Release mode.
+    public var releaseProvider: ReleaseProvider? {
+        guard let commands = config.release, let configFolder else { return nil }
+        return ReleaseProvider(commands: commands, folder: configFolder)
     }
 
     public func scheme(named name: String) -> Scheme? {

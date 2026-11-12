@@ -7,11 +7,14 @@ public struct ToolCommand: Sendable, Equatable {
     public let arguments: [String]
     /// Variables added to the tool's environment, on top of the ones this process has.
     public let environment: [String: String]
+    /// The folder the tool is started in; nil leaves it where this process is.
+    public let workingDirectory: URL?
 
-    public init(executable: String, arguments: [String], environment: [String: String] = [:]) {
+    public init(executable: String, arguments: [String], environment: [String: String] = [:], workingDirectory: URL? = nil) {
         self.executable = executable
         self.arguments = arguments
         self.environment = environment
+        self.workingDirectory = workingDirectory
     }
 
     /// Short name for error messages, for example "xcrun devicectl".

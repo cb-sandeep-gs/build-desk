@@ -16,6 +16,7 @@ enum CLI {
         case screenshot
         case appdata
         case crashes
+        case release
     }
 
     enum Option {
@@ -28,9 +29,15 @@ enum CLI {
         static let launchURL = "--launch-url"
         static let only = "--only"
         static let output = "--output"
+        static let action = "--action"
+        static let app = "--app"
+        static let track = "--track"
+        static let branch = "--branch"
+        static let from = "--from"
         /// Options that are followed by a value.
         static let withValue: Set<String> = [
             scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL, only, output,
+            action, app, track, branch, from,
         ]
     }
 
@@ -71,6 +78,9 @@ enum CLI {
       builddesk screenshot --device <name-or-udid> --output <file.png>
       builddesk appdata <bundle-id> --device <name-or-udid> --output <folder>
       builddesk crashes <process-name> --device <name-or-udid> [--output <folder>]
+      builddesk release status <project> [--json]
+      builddesk release plan <project> --action testflight|store --app <id>
+                             [--track <id>] [--branch <name>] [--from <build>]
 
     <project> is a .xcodeproj or .xcworkspace.
       --full          also ask xcodebuild for schemes that have no scheme file (slower)
@@ -83,6 +93,10 @@ enum CLI {
       --launch-args "<args>"      command-line arguments, separated by spaces
       --launch-env "<N=v N=v>"    environment variables
       --launch-url <link>         a link the app opens at launch
+
+    release reads the project's own release commands (the "release" section of its
+    .builddesk.json). status shows where each app stands; plan shows what an action would do
+    and changes nothing. Running an action is done from the app, after a confirmation.
 
     crashes lists the crash logs of an app (named after its process, such as "Sample"), newest
     first, and copies them to the folder given with --output.

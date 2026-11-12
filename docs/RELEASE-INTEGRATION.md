@@ -1,7 +1,8 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Nothing here is built yet. Roadmap: [ROADMAP.md](ROADMAP.md).
+Written 2026-11-13. Step R0 is built; R1 to R4 are not. The contract itself is described for providers in
+[release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
 
@@ -83,13 +84,31 @@ the action in full ("Create tag and push"). Nothing is run from a preview.
 
 | Step | Result | Where |
 |---|---|---|
-| R0 Contract | The contract and its schema; the `release` section of `.builddesk.json`; a provider for the first project that prints status, plan and run as JSON | Both repositories |
+| R0 Contract (done 2026-11-13) | The contract and its schema; the `release` section of `.builddesk.json`; a provider for the first project that prints status, plan and run as JSON | Both repositories |
 | R1 Read-only Release mode | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
 | R2 Tagging | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
 | R3 Store | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
 | R4 Build Desk extras | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
 
 R1 and R2 need no store credentials. R3 shows "not connected" until the person has connected the provider.
+
+## What R0 built
+
+| Part | Where | What it does |
+|---|---|---|
+| Contract types | `ReleaseStatus`, `ReleaseApp`, `ReleaseTrack`, `ReleaseBuild`, `ReleaseAction`, `ReleasePlan`, `ReleaseResult` | The JSON shapes of contract version 1, with unknown fields ignored and a newer version refused with a clear message. |
+| Client | `ReleaseClient`, `ReleaseProvider` | Runs the project's commands from the folder of its settings file, adds the action as flags, passes written notes as a temporary file and the confirmed plan's commit as `--expect`. A provider's own error words are shown as they are. |
+| Settings | `ProjectConfig.release`, `ReleaseCommands` | The `release` section of `.builddesk.json`: `status` (required), `plan`, `run`, and the reserved `checks` and `store`. |
+| Command line | `builddesk release status`, `builddesk release plan` | Shows where each app stands and previews an action. Running an action is left to the app, behind a confirmation. |
+| Document | `docs/release-contract.md`, `docs/builddesk.schema.json` | What a provider must print, with examples. |
+
+Tried with the first provider: status came back in about a second (two apps, four tracks, 60 recent builds), and a
+plan for a new test build returned the next build's name, three steps and its generated notes. Nothing was tagged:
+`run` was not called, because it pushes a tag and starts a cloud build.
+
+Answers to two open points: a plan does contact the remote (the provider fetches tags to find the next build
+number), and it takes about ten seconds, so the app must show that it is working. The provider had no
+command-line status command; one was added there.
 
 ## The first provider
 
@@ -120,8 +139,6 @@ contract's shapes.
 
 | Point | Needed for | Notes |
 |---|---|---|
-| The exact JSON each existing command prints | R0 | Read from the scripts and help text only; the commands were not run, because even a preview may fetch from the remote. |
-| Whether a preview may fetch from the remote | R0 | If it must, the contract says so and Build Desk shows "contacting the remote" while planning. |
 | Where the builds table gets cloud build state without store access | R1 | Without `store`, the table shows tags and notes only. |
 | Per-person or shared store key | R3 | The provider decides; Build Desk only shows connected or not. |
 | Sizes | All | R0 and R1 about a week together, R2 a few days, R3 about a week, R4 about a week. Estimates, not measured. |

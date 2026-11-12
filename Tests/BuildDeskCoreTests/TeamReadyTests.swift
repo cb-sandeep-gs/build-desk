@@ -62,7 +62,7 @@ final class ProjectConfigTests: XCTestCase {
             (#"{"hiddenSchemes": "Tests"}"#, ".builddesk.json can't be used: hiddenSchemes has the wrong kind of value."),
             (#"{"favouriteSchemes": ["Sample"]}"#,
              ".builddesk.json has keys Build Desk doesn't know: favouriteSchemes. "
-                + "Known keys: defaultConfiguration, defaultScheme, favoriteSchemes, hiddenSchemes."),
+                + "Known keys: defaultConfiguration, defaultScheme, favoriteSchemes, hiddenSchemes, release."),
         ]
         for (json, problem) in cases {
             let (folder, container) = try makeRepository(config: json)

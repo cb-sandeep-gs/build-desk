@@ -13,24 +13,29 @@ public struct ProjectConfig: Sendable, Equatable, Codable {
     public var defaultScheme: String?
     /// The configuration selected when a person opens the project for the first time.
     public var defaultConfiguration: String?
+    /// The project's release commands; nil means the project has no Release mode.
+    public var release: ReleaseCommands?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case favoriteSchemes
         case hiddenSchemes
         case defaultScheme
         case defaultConfiguration
+        case release
     }
 
     public init(
         favoriteSchemes: [String] = [],
         hiddenSchemes: [String] = [],
         defaultScheme: String? = nil,
-        defaultConfiguration: String? = nil
+        defaultConfiguration: String? = nil,
+        release: ReleaseCommands? = nil
     ) {
         self.favoriteSchemes = favoriteSchemes
         self.hiddenSchemes = hiddenSchemes
         self.defaultScheme = defaultScheme
         self.defaultConfiguration = defaultConfiguration
+        self.release = release
     }
 
     /// Every key is optional, so a file can set one thing and leave the rest alone.
@@ -40,6 +45,7 @@ public struct ProjectConfig: Sendable, Equatable, Codable {
         hiddenSchemes = try values.decodeIfPresent([String].self, forKey: .hiddenSchemes) ?? []
         defaultScheme = try values.decodeIfPresent(String.self, forKey: .defaultScheme)
         defaultConfiguration = try values.decodeIfPresent(String.self, forKey: .defaultConfiguration)
+        release = try values.decodeIfPresent(ReleaseCommands.self, forKey: .release)
     }
 
     public func hides(_ scheme: String) -> Bool {
@@ -59,6 +65,29 @@ public struct ProjectConfig: Sendable, Equatable, Codable {
             rest = rest[range.upperBound...]
         }
         return true
+    }
+}
+
+/// The commands of a project's release workflow, each an argument list run from the folder that
+/// holds the settings file. Only `status` is required; the others add what they name.
+public struct ReleaseCommands: Sendable, Equatable, Codable {
+    /// Prints where each app stands. Read-only.
+    public var status: [String]
+    /// Prints what an action would do. Changes nothing.
+    public var plan: [String]?
+    /// Does what a confirmed plan described.
+    public var run: [String]?
+    /// Prints the go or no-go gates.
+    public var checks: [String]?
+    /// Prints live state from the store.
+    public var store: [String]?
+
+    public init(status: [String], plan: [String]? = nil, run: [String]? = nil, checks: [String]? = nil, store: [String]? = nil) {
+        self.status = status
+        self.plan = plan
+        self.run = run
+        self.checks = checks
+        self.store = store
     }
 }
 

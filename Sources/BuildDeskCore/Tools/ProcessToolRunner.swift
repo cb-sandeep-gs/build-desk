@@ -54,6 +54,7 @@ private final class ProcessBox: @unchecked Sendable {
     init(command: ToolCommand) {
         process.executableURL = URL(fileURLWithPath: command.executable)
         process.arguments = command.arguments
+        if let folder = command.workingDirectory { process.currentDirectoryURL = folder }
         if !command.environment.isEmpty {
             process.environment = ProcessInfo.processInfo.environment.merging(command.environment) { _, added in added }
         }

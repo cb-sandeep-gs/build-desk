@@ -96,6 +96,7 @@ it in. Everyone who opens the project in Build Desk then gets the same setup. Ev
 
 | Key | Type | Meaning |
 |---|---|---|
+| `release` | object | The project's release commands, which give it a Release mode. See [docs/release-contract.md](docs/release-contract.md). |
 | `favoriteSchemes` | list of names | Listed first, in this order, in a Favorites group. |
 | `hiddenSchemes` | list of names | Left out of the list. A name must match in full; `*` stands for any run of characters. A "Show hidden" box in the sidebar brings them back. |
 | `defaultScheme` | name | Selected the first time a person opens the project. After that their own last choice is used. |
@@ -141,6 +142,8 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk screenshot --device <name-or-udid> --output <file.png>` | Saves a picture of the device's screen. |
 | `builddesk appdata <bundle-id> --device <name-or-udid> --output <folder>` | Copies an installed app's data folder. |
 | `builddesk crashes <process-name> --device <name-or-udid>` | Lists the app's crash logs, newest first; `--output <folder>` copies them. |
+| `builddesk release status <project>` | Where each app stands: version, store release and the latest build per track, from the project's own release commands. |
+| `builddesk release plan <project> --action testflight\|store --app <id>` | What a release action would do, with its notes. Changes nothing. |
 | `builddesk test <project> --scheme <name> --device <name-or-udid>` | Runs the scheme's tests and prints the failures. `--only <Bundle[/Class[/test]]>` limits the run. Exits with 2 when tests failed. |
 
 `<project>` is a `.xcodeproj` or `.xcworkspace`. Add `--json` to `schemes`, `targets` and `devices` for

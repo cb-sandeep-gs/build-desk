@@ -20,6 +20,10 @@ public enum BuildDeskError: Error, Equatable, Sendable {
     case noBuiltProduct(scheme: String)
     /// A dropped `.app` or `.ipa` could not be read as an app.
     case unreadableArtifact(path: String, reason: String)
+    /// The project's settings file names no command for this part of its release workflow.
+    case releaseCommandMissing(name: String)
+    /// The project's release command reported a failure, in its own words.
+    case releaseFailed(message: String)
     /// Install or launch failed after a good build.
     case stepFailed(step: PipelineStep, message: String)
     /// No device matches the name or identifier the caller gave.
@@ -49,6 +53,10 @@ extension BuildDeskError: LocalizedError {
             "There is no built copy of \(scheme) for this device yet. Build it once, then it can be installed again without rebuilding."
         case .unreadableArtifact(let path, let reason):
             "Couldn't read \(path) as an app: \(reason). Choose a .app or .ipa built for a device or simulator."
+        case .releaseCommandMissing(let name):
+            "This project's \(ProjectConfig.fileName) has no release \(name) command."
+        case .releaseFailed(let message):
+            message
         case .stepFailed(let step, let message):
             "The \(step.rawValue) step failed. \(message)"
         case .deviceNotFound(let query):

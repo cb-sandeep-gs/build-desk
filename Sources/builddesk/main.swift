@@ -219,6 +219,43 @@ func perform(_ command: CLI.Command, _ arguments: Arguments) async throws {
     case .console: try await console(arguments)
     case .test: try await test(arguments)
     case .screenshot, .appdata, .crashes: try await performDeviceTool(command, arguments)
+    case .release: try await release(arguments)
+    }
+}
+
+/// `release status <project>` and `release plan <project> …`: the project's release workflow.
+func release(_ arguments: Arguments) async throws {
+    guard arguments.positionals.count == 2 else { throw UsageError(message: "Give status or plan, then one project path.") }
+    let container = try ProjectContainer(url: URL(fileURLWithPath: arguments.positionals[1]))
+    guard let provider = try ProjectReader().quickSnapshot(of: container).releaseProvider else {
+        throw UsageError(message: "This project's \(ProjectConfig.fileName) has no release section, so it has no release commands.")
+    }
+    switch arguments.positionals[0] {
+    case "status":
+        let status = try await ReleaseClient().status(provider)
+        if arguments.has(CLI.Flag.json) { return try Output.json(status) }
+        for app in status.apps {
+            print("\(app.name) \(app.version)")
+            Output.table(
+                [["  store", app.store?.version ?? "none", app.commitsSinceStore.map { "\($0) commits since" } ?? ""]]
+                    + app.tracks.map { ["  \($0.name)", $0.latest?.version ?? "none", $0.commitsSince.map { "\($0) commits since" } ?? ""] }
+            )
+        }
+    case "plan":
+        guard let kind = ReleaseAction.Kind(rawValue: try arguments.required(CLI.Option.action)) else {
+            throw UsageError(message: "\(CLI.Option.action) is testflight or store.")
+        }
+        let action = ReleaseAction(
+            kind: kind, app: try arguments.required(CLI.Option.app), track: arguments.options[CLI.Option.track],
+            branch: arguments.options[CLI.Option.branch], from: arguments.options[CLI.Option.from]
+        )
+        let plan = try await ReleaseClient().plan(action, provider)
+        print(plan.title)
+        plan.steps.enumerated().forEach { print("  \($0.offset + 1). \($0.element)") }
+        (plan.warnings ?? []).forEach { print("  warning: \($0)") }
+        if let notes = plan.notes { print("\nNotes:\n\(notes)") }
+    default:
+        throw UsageError(message: "release takes status or plan.")
     }
 }
 

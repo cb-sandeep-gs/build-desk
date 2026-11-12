@@ -8,12 +8,16 @@
     "favoriteSchemes": {
       "description": "Schemes listed first, in this order, in a group of their own. Names that the project does not have are ignored.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "hiddenSchemes": {
       "description": "Schemes left out of the list. A name must match in full; * stands for any run of characters, as in \"*Tests\".",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "defaultScheme": {
       "description": "The scheme selected when a person opens the project for the first time. After that, their own last choice is used.",
@@ -22,6 +26,56 @@
     "defaultConfiguration": {
       "description": "The build configuration selected when a person opens the project for the first time. After that, their own last choice is used.",
       "type": "string"
+    },
+    "release": {
+      "description": "The project's release commands, which give it a Release mode. Each is an argument list run from the folder that holds this file. Described in docs/release-contract.md.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Prints where each app stands. Read-only."
+        },
+        "plan": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Prints what an action would do. Changes nothing."
+        },
+        "run": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Does what a confirmed plan described."
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Prints the go or no-go gates. Reserved."
+        },
+        "store": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Prints live state from the store. Reserved."
+        }
+      }
     }
   }
 }

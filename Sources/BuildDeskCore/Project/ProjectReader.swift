@@ -39,7 +39,8 @@ public struct ProjectReader: Sendable {
             configurations: configurations,
             defaultConfiguration: defaultConfiguration,
             config: loaded.config,
-            configProblem: loaded.problem
+            configProblem: loaded.problem,
+            configFolder: loaded.fileURL?.deletingLastPathComponent()
         )
     }
 
@@ -63,7 +64,8 @@ public struct ProjectReader: Sendable {
             configurations: quick.configurations.isEmpty ? listing.configurations : quick.configurations,
             defaultConfiguration: quick.defaultConfiguration,
             config: quick.config,
-            configProblem: quick.configProblem
+            configProblem: quick.configProblem,
+            configFolder: quick.configFolder
         )
     }
 
