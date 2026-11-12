@@ -43,15 +43,18 @@ public struct RunNotice: Equatable, Sendable {
     /// The notice for a finished run; nil for a run the user stopped, which needs no announcement.
     @MainActor
     public static func make(for run: RunModel) -> RunNotice? {
-        guard let request = run.request else { return nil }
+        guard let job = run.job else { return nil }
         switch run.phase {
         case .succeeded:
             let seconds = (run.finishedAt ?? Date()).timeIntervalSince(run.startedAt ?? Date())
-            let result = !request.installs ? "Built" : request.launches ? "Installed and running on \(request.device.name)"
-                : "Installed on \(request.device.name)"
-            return RunNotice(title: "\(request.scheme) is ready", body: "\(result) in \(DurationText.short(seconds)).")
+            let result = !job.installs ? "Built" : job.launches ? "Installed and running on \(job.deviceSummary)"
+                : "Installed on \(job.deviceSummary)"
+            // With several devices, say so when one of them did not get the app.
+            let failed = run.deviceOutcomes.filter { !$0.succeeded }.map(\.device.name)
+            let note = failed.isEmpty ? "" : " Failed on \(failed.joined(separator: ", "))."
+            return RunNotice(title: "\(job.title) is ready", body: "\(result) in \(DurationText.short(seconds)).\(note)")
         case .failed(let message):
-            return RunNotice(title: "\(request.scheme) failed", body: message)
+            return RunNotice(title: "\(job.title) failed", body: message)
         case .idle, .running, .stopped:
             return nil
         }

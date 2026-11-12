@@ -23,6 +23,27 @@ public struct BuildDeskRootView: View {
             }
         }
         .frame(minWidth: Layout.windowMinWidth, minHeight: Layout.windowMinHeight)
+        // A project, its folder, a .app or an .ipa can be dropped anywhere on the window.
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let url = urls.first else { return false }
+            Task { await app.openDropped(url) }
+            return true
+        }
+        .sheet(isPresented: Binding(
+            get: { app.pendingArtifact != nil },
+            set: { isShown in if !isShown { app.dismissPendingArtifact() } }
+        )) {
+            if let artifact = app.pendingArtifact { ArtifactInstallSheet(app: app, artifact: artifact) }
+        }
+        // The welcome screen shows a failed open in place; with a project open it needs an alert.
+        .alert("Couldn't open that", isPresented: Binding(
+            get: { app.openError != nil && app.project != nil },
+            set: { isShown in if !isShown { app.clearOpenError() } }
+        )) {
+            Button("OK") { app.clearOpenError() }
+        } message: {
+            Text(app.openError ?? "")
+        }
         .task {
             guard autoloads else { return }
             await app.restoreLastProject()
@@ -44,7 +65,7 @@ public enum ProjectPicker {
     public static func choose() -> URL? {
         let panel = NSOpenPanel()
         panel.title = "Open a project"
-        panel.message = "Choose an Xcode project, a workspace, or the folder that contains one."
+        panel.message = "Choose an Xcode project, a workspace, the folder that contains one, or a built .app or .ipa to install."
         panel.prompt = "Open"
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
@@ -54,7 +75,7 @@ public enum ProjectPicker {
 
     public static func chooseAndOpen(in app: AppModel) {
         guard let url = choose() else { return }
-        Task { await app.open(url) }
+        Task { await app.openDropped(url) }
     }
 }
 
@@ -70,7 +91,7 @@ struct WelcomeView: View {
                 .accessibilityHidden(true)
             VStack(spacing: Layout.spacingSmall) {
                 Text("Build Desk").font(.largeTitle.weight(.semibold))
-                Text("Build, install and launch any scheme on your device, without opening Xcode.")
+                Text("Build, install and launch any scheme on your device, without opening Xcode. Drop a project, or a built app, here.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -90,12 +111,6 @@ struct WelcomeView: View {
         .frame(maxWidth: Layout.welcomeWidth)
         .padding(Layout.spacingLarge)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Dropping a project or its folder on the window opens it.
-        .dropDestination(for: URL.self) { urls, _ in
-            guard let url = urls.first else { return false }
-            Task { await app.open(url) }
-            return true
-        }
     }
 
     private var recents: some View {

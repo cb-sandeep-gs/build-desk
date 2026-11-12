@@ -6,8 +6,8 @@ Xcode.
 Build Desk drives the command-line tools that ship inside Xcode (`xcodebuild`, `devicectl`, `simctl`), so Xcode
 must be installed but never needs to be running. Signing uses the Apple account already saved in Xcode.
 
-**Status:** the Mac app has its main window (BD-2) and menu bar item (BD-3), on top of the core library and the
-`builddesk` command-line tool (BD-1). See [docs/PLAN.md](docs/PLAN.md).
+**Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
+window (BD-2), the menu bar item (BD-3) and the extras (BD-4). See [docs/PLAN.md](docs/PLAN.md).
 
 ## Use the app
 
@@ -28,6 +28,16 @@ open .build/BuildDesk.app
 3. Pick a device and a configuration. Only devices that fit the scheme's platform are offered.
 4. Press **Build and Install** (⌘R). **Build Only** (⌘B) compiles without installing; **Install Last Build** (⌘I)
    puts the app from the last build on the device without rebuilding; **Stop** (⌘.) ends a run.
+
+**Several devices.** With more than one device of the same kind connected, **Also install on** ticks the others;
+one build is installed on all of them and each device's result is listed.
+
+**App files.** Drop a built `.app` or `.ipa` on the window to install it without a project. A sheet shows what the
+app is and offers the devices it fits.
+
+**After an install.** Under the scheme name the window shows when it was last installed on the selected device and
+the branch and commit it was built from. The **More** menu opens the app's **console** (what it prints with
+`print` and `NSLog`; unified logging is not included) and can **uninstall** it, after a confirmation.
 
 **Menu bar.** Press **Pin** in the window to keep the current scheme, configuration and device in the menu bar.
 The hammer icon there opens a list of your pins, each with a one-click build and install, plus the progress of
@@ -54,6 +64,9 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk targets <project>` | Lists targets with their product kind. |
 | `builddesk devices` | Lists real devices and simulators, usable ones first. |
 | `builddesk run <project> --scheme <name> --device <name-or-udid>` | Builds the scheme, installs the app on the device and launches it. |
+| `builddesk install <app-or-ipa> --device <name-or-udid>` | Installs a built `.app` or `.ipa` and launches it. |
+| `builddesk console <bundle-id> --device <name-or-udid>` | Relaunches an installed app and prints what it writes until it exits or you press Ctrl-C. |
+| `builddesk uninstall <bundle-id> --device <name-or-udid>` | Removes an app and its data from the device. |
 
 `<project>` is a `.xcodeproj` or `.xcworkspace`. Add `--json` to `schemes`, `targets` and `devices` for
 machine-readable output.
@@ -66,6 +79,7 @@ Options of `run`:
 | `--no-launch` | Install the app but don't open it. |
 | `--build-only` | Build and stop; for frameworks and compile checks. |
 | `--install-only` | Install the app the last build left behind, without rebuilding. |
+| `--also <name-or-udid>` | A second device of the same kind to install the same build on (also for `install`). |
 
 The build goes into Xcode's normal DerivedData folder, so it is incremental with builds made from Xcode itself.
 The full output of each run is kept in `~/Library/Logs/BuildDesk` (the newest 20 runs).
@@ -88,7 +102,8 @@ To check the window without opening it, render it to an image:
 ```
 
 This shows a made-up demo project with a build in progress. Add `--dark`, `--width <points>`, `--height <points>`,
-`--welcome` for the welcome screen, `--menu` for the menu bar popover, or `--project <path>` for a real project.
+`--welcome` for the welcome screen, `--menu` for the menu bar popover, `--installed` for the state after an install
+(last-install line and console), `--sheet` for the app-file sheet, or `--project <path>` for a real project.
 
 ## The phase 0 proof script
 

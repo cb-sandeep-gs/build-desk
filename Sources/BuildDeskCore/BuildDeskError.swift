@@ -18,6 +18,8 @@ public enum BuildDeskError: Error, Equatable, Sendable {
     case noApplicationProduct(scheme: String)
     /// An install without a build was asked for, but no earlier build left an app behind.
     case noBuiltProduct(scheme: String)
+    /// A dropped `.app` or `.ipa` could not be read as an app.
+    case unreadableArtifact(path: String, reason: String)
     /// Install or launch failed after a good build.
     case stepFailed(step: PipelineStep, message: String)
     /// No device matches the name or identifier the caller gave.
@@ -45,6 +47,8 @@ extension BuildDeskError: LocalizedError {
             "The scheme \(scheme) doesn't build an app, so there is nothing to install. Choose an app scheme."
         case .noBuiltProduct(let scheme):
             "There is no built copy of \(scheme) for this device yet. Build it once, then it can be installed again without rebuilding."
+        case .unreadableArtifact(let path, let reason):
+            "Couldn't read \(path) as an app: \(reason). Choose a .app or .ipa built for a device or simulator."
         case .stepFailed(let step, let message):
             "The \(step.rawValue) step failed. \(message)"
         case .deviceNotFound(let query):

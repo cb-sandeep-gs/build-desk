@@ -36,6 +36,16 @@ public enum AppleTools {
         xcrun(["devicectl", "device", "process", "launch", "--device", udid, "--terminate-existing", bundleIdentifier])
     }
 
+    /// Launches the app and stays attached, printing what it writes to standard output and
+    /// error until it exits.
+    public static func consoleOnDevice(udid: String, bundleIdentifier: String) -> ToolCommand {
+        xcrun(["devicectl", "device", "process", "launch", "--device", udid, "--terminate-existing", "--console", bundleIdentifier])
+    }
+
+    public static func uninstallFromDevice(udid: String, bundleIdentifier: String) -> ToolCommand {
+        xcrun(["devicectl", "device", "uninstall", "app", "--device", udid, bundleIdentifier])
+    }
+
     // MARK: - simctl (simulators)
 
     public static func listSimulators() -> ToolCommand {
@@ -53,6 +63,30 @@ public enum AppleTools {
 
     public static func launchOnSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
         xcrun(["simctl", "launch", "--terminate-running-process", udid, bundleIdentifier])
+    }
+
+    public static func consoleOnSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
+        xcrun(["simctl", "launch", "--console", "--terminate-running-process", udid, bundleIdentifier])
+    }
+
+    public static func uninstallFromSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
+        xcrun(["simctl", "uninstall", udid, bundleIdentifier])
+    }
+
+    // MARK: - Other tools
+
+    /// Lists the file names inside an `.ipa` (a zip archive), one per line.
+    public static func listArchive(_ archive: URL) -> ToolCommand {
+        ToolCommand(executable: Path.unzip, arguments: ["-Z1", archive.path])
+    }
+
+    /// Prints one file of an `.ipa` without unpacking the rest.
+    public static func extract(_ entry: String, fromArchive archive: URL) -> ToolCommand {
+        ToolCommand(executable: Path.unzip, arguments: ["-p", archive.path, entry])
+    }
+
+    public static func git(in folder: URL, _ arguments: [String]) -> ToolCommand {
+        ToolCommand(executable: Path.git, arguments: ["-C", folder.path] + arguments)
     }
 
     // MARK: - Shared

@@ -10,7 +10,7 @@ extension RunModel {
             let tasks = "\(taskCount.formatted()) tasks"
             return currentTarget.map { "\(tasks) · building \($0)" } ?? (taskCount == 0 ? "Starting the build…" : tasks)
         }
-        let device = request?.device.name ?? "the device"
+        let device = job?.deviceSummary ?? "the device"
         if statuses[.launch] == .running { return "Launching on \(device)…" }
         if statuses[.install] == .running { return "Installing on \(device)…" }
         return "Finding the built app…"
@@ -18,11 +18,12 @@ extension RunModel {
 
     /// One line on how a successful run ended.
     var successText: String {
-        guard let request else { return "Done." }
-        guard request.installs else { return "\(request.scheme) built." }
-        return request.launches
-            ? "\(request.scheme) is installed and running on \(request.device.name)."
-            : "\(request.scheme) is installed on \(request.device.name)."
+        guard let job else { return "Done." }
+        guard job.installs else { return "\(job.title) built." }
+        // Name only the devices that got the app; the rest are listed with their reasons.
+        let reached = deviceOutcomes.isEmpty ? job.devices.map(\.name) : deviceOutcomes.filter(\.succeeded).map(\.device.name)
+        let devices = reached.formatted(.list(type: .and))
+        return job.launches ? "\(job.title) is installed and running on \(devices)." : "\(job.title) is installed on \(devices)."
     }
 }
 
@@ -70,7 +71,7 @@ public struct MenuBarView: View {
         case .running:
             VStack(alignment: .leading, spacing: Layout.spacingSmall) {
                 HStack {
-                    Text(run.request.map { "\($0.scheme) → \($0.device.name)" } ?? "Building").font(.headline).lineLimit(1)
+                    Text(run.job.map { "\($0.title) → \($0.deviceSummary)" } ?? "Building").font(.headline).lineLimit(1)
                     Spacer()
                     Button("Stop", systemImage: "stop.fill") { run.stop() }
                         .labelStyle(.iconOnly)

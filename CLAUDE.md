@@ -36,7 +36,8 @@ and docs.
 - **No personal data in the repo.** Device UDIDs, device names, team IDs, signing identities and local paths stay
   out of code, tests, fixtures, docs and commit messages; use made-up values in fixtures.
 - **Destructive actions need the user's click:** uninstalling an app, deleting a build folder or clearing logs
-  is never automatic.
+  is never automatic. Never uninstall a real app from a user's device to test; use the error path or a fake.
+- **Git is read-only.** Build Desk reads the branch and commit of a checkout and never changes it.
 
 ## Performance and memory
 - **The main thread only draws.** Process runs, file reads and output parsing happen off it; the window must stay
@@ -72,6 +73,8 @@ and dark:
 .build/debug/BuildDeskApp --snapshot window.png
 .build/debug/BuildDeskApp --snapshot small-dark.png --dark --width 760 --height 480
 .build/debug/BuildDeskApp --snapshot menu.png --menu        # the menu bar popover
+.build/debug/BuildDeskApp --snapshot after.png --installed  # last-install line and console
+.build/debug/BuildDeskApp --snapshot sheet.png --sheet      # the app-file sheet
 ```
 
 ## Testing against a real project

@@ -45,12 +45,22 @@ struct FakeDiscovery: DeviceDiscovering {
 /// Plays a scripted run. With `hangs`, it stays in the build step until the consumer stops it.
 struct FakeBuilder: BuildRunning {
     let requests = Locked<[BuildRequest]>([])
+    let installRequests = Locked<[InstallRequest]>([])
     let events = Locked<[PipelineEvent]>([])
     let failure = Locked<BuildDeskError?>(nil)
     let hangs = Locked(false)
 
+    func install(_ request: InstallRequest) -> AsyncThrowingStream<PipelineEvent, Error> {
+        installRequests.value += [request]
+        return play()
+    }
+
     func run(_ request: BuildRequest) -> AsyncThrowingStream<PipelineEvent, Error> {
         requests.value += [request]
+        return play()
+    }
+
+    private func play() -> AsyncThrowingStream<PipelineEvent, Error> {
         let (events, failure, hangs) = (events.value, failure.value, hangs.value)
         return AsyncThrowingStream { continuation in
             events.forEach { continuation.yield($0) }
@@ -78,7 +88,16 @@ enum Sample {
         id: "WATCH", name: "Apple Watch", model: "Apple Watch", platform: "watchOS", osVersion: "27.2",
         kind: .simulator, connection: .local, isReady: true, isBooted: false
     )
+    static let secondPhone = Device(
+        id: "PHONE2", name: "Second iPhone", model: "iPhone 16", platform: "iOS", osVersion: "27.0",
+        kind: .physical, connection: .network, isReady: true, isBooted: true
+    )
     static let devices = [phone, offlinePhone, simulator, watchSimulator]
+
+    static let artifact = AppArtifact(
+        url: URL(fileURLWithPath: "/downloads/Sample.ipa"), bundleIdentifier: "com.example.sample",
+        name: "Sample", version: "2.1", platform: .iOS, isSimulatorBuild: false
+    )
 
     static let projectURL = URL(fileURLWithPath: "/projects/Sample.xcodeproj")
 
@@ -130,8 +149,41 @@ enum Sample {
         .stepStarted(.locate), .stepFinished(.locate, seconds: 0.5),
         .stepStarted(.install), .stepFinished(.install, seconds: 1),
         .stepStarted(.launch), .stepFinished(.launch, seconds: 0.1),
+        .deviceFinished(DeviceOutcome(device: phone)),
         .finished(summary),
     ]
+}
+
+/// Stands in for the services that work with app files, installed apps and the checkout.
+struct FakeDeviceServices: ArtifactReading, DeviceAppManaging, SourceStateReading {
+    let artifact = Locked<AppArtifact?>(Sample.artifact)
+    let consoleLines = Locked<[String]>([])
+    let consoleFailure = Locked<BuildDeskError?>(nil)
+    let uninstalled = Locked<[String]>([])
+    let uninstallFailure = Locked<BuildDeskError?>(nil)
+    let source = Locked<SourceState?>(SourceState(branch: "main", commit: "1a2b3c4", hasLocalChanges: true))
+
+    func read(_ url: URL) async throws -> AppArtifact {
+        guard let artifact = artifact.value else {
+            throw BuildDeskError.unreadableArtifact(path: url.path, reason: "it has no Info.plist")
+        }
+        return artifact
+    }
+
+    func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error> {
+        let (lines, failure) = (consoleLines.value, consoleFailure.value)
+        return AsyncThrowingStream { continuation in
+            lines.forEach { continuation.yield($0) }
+            continuation.finish(throwing: failure)
+        }
+    }
+
+    func uninstall(bundleIdentifier: String, from device: Device) async throws {
+        if let failure = uninstallFailure.value { throw failure }
+        uninstalled.value += ["\(bundleIdentifier) from \(device.name)"]
+    }
+
+    func state(of folder: URL) async -> SourceState? { source.value }
 }
 
 /// Preferences that live only for one test.

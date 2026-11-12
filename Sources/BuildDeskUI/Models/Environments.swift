@@ -15,7 +15,10 @@ extension AppEnvironment {
                 NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == xcodeBundleIdentifier }
             },
             notifier: UserNotificationNotifier(),
-            isAppActive: { NSApp?.isActive ?? false }
+            isAppActive: { NSApp?.isActive ?? false },
+            artifacts: ArtifactReader(),
+            deviceApps: DeviceAppService(),
+            source: SourceStateReader()
         )
     }
 }
@@ -35,9 +38,19 @@ public enum Demo {
         return PreferenceStore(defaults: UserDefaults(suiteName: defaultsSuite) ?? .standard)
     }
 
-    /// An app model showing the demo project with a build in progress.
+    /// What the demo shows.
+    public enum Scene: Sendable {
+        /// A build in progress.
+        case building
+        /// After an install: the last-install line and the app's console.
+        case installed
+        /// An app file waiting for a device to be chosen.
+        case appFile
+    }
+
+    /// An app model showing the demo project in the given scene.
     @MainActor
-    public static func runningApp() async -> AppModel {
+    public static func app(showing scene: Scene = .building) async -> AppModel {
         let store = scratchStore()
         store.pins = [
             PinnedRun(project: projectURL, scheme: "Harbor", configuration: "Debug", deviceID: "DEMO-PHONE", deviceName: "Harbor iPhone"),
@@ -45,27 +58,45 @@ public enum Demo {
                       deviceName: "iPhone 17 Pro"),
             PinnedRun(project: projectURL, scheme: "Harbor", configuration: "Release", deviceID: "DEMO-PAD", deviceName: "Test iPad"),
         ]
-        let app = AppModel(environment: environment, store: store)
-        await app.open(projectURL)
-        await app.refreshEnvironment()
         // As if this scheme had been built before, so the progress bar has something to measure against.
         store.setTaskCount(
             previousTaskCount,
             for: AppModel.taskCountKey(project: projectURL, scheme: "Harbor", configuration: "Debug", deviceKind: .physical)
         )
-        app.runSelected(.buildAndInstall)
-        // Let the scripted build events arrive.
+        if scene == .installed {
+            store.installRecords = [
+                InstallRecord.key(project: projectURL, scheme: "Harbor", deviceID: "DEMO-PHONE"): InstallRecord(
+                    bundleIdentifier: "com.example.harbor", configuration: "Debug", deviceName: "Harbor iPhone",
+                    date: Date().addingTimeInterval(-lastInstallAge),
+                    source: SourceState(branch: "feature/checkout", commit: "1a2b3c4", hasLocalChanges: true)
+                ),
+            ]
+        }
+        let app = AppModel(environment: environment, store: store)
+        await app.open(projectURL)
+        await app.refreshEnvironment()
+        switch scene {
+        case .building: app.runSelected(.buildAndInstall)
+        case .installed: app.openConsoleForSelection()
+        case .appFile: await app.openDropped(URL(fileURLWithPath: "/Downloads/Harbor.ipa"))
+        }
+        // Let the scripted events arrive.
         try? await Task.sleep(for: .milliseconds(200))
         return app
     }
 
+    private static let lastInstallAge: TimeInterval = 2 * 60 * 60
+
     static let environment = AppEnvironment(
-        reader: DemoReader(), discovery: DemoDiscovery(), builder: DemoBuilder(), isXcodeOpen: { false }
+        reader: DemoReader(), discovery: DemoDiscovery(), builder: DemoBuilder(), isXcodeOpen: { false },
+        artifacts: DemoDeviceServices(), deviceApps: DemoDeviceServices()
     )
 
     static let devices: [Device] = [
         Device(id: "DEMO-PHONE", name: "Harbor iPhone", model: "iPhone 17", platform: "iOS", osVersion: "27.2",
                kind: .physical, connection: .wired, isReady: true, isBooted: true),
+        Device(id: "DEMO-PHONE-2", name: "QA iPhone", model: "iPhone 16", platform: "iOS", osVersion: "27.0",
+               kind: .physical, connection: .network, isReady: true, isBooted: true),
         Device(id: "DEMO-PAD", name: "Test iPad", model: "iPad Pro", platform: "iOS", osVersion: "27.1",
                kind: .physical, connection: .none, isReady: false, isBooted: false),
         Device(id: "DEMO-SIM", name: "iPhone 17 Pro", model: "iPhone 17 Pro", platform: "iOS", osVersion: "27.2",
@@ -118,6 +149,10 @@ private struct DemoDiscovery: DeviceDiscovering {
 private struct DemoBuilder: BuildRunning {
     private static let taskCount = 412
 
+    func install(_ request: InstallRequest) -> AsyncThrowingStream<PipelineEvent, Error> {
+        AsyncThrowingStream { $0.yield(.stepStarted(.install)) }
+    }
+
     func run(_ request: BuildRequest) -> AsyncThrowingStream<PipelineEvent, Error> {
         AsyncThrowingStream { continuation in
             continuation.yield(.stepStarted(.build))
@@ -134,4 +169,29 @@ private struct DemoBuilder: BuildRunning {
             ))))
         }
     }
+}
+
+/// A made-up app file and console output.
+private struct DemoDeviceServices: ArtifactReading, DeviceAppManaging {
+    func read(_ url: URL) async throws -> AppArtifact {
+        AppArtifact(
+            url: url, bundleIdentifier: "com.example.harbor", name: "Harbor", version: "4.2", platform: .iOS, isSimulatorBuild: false
+        )
+    }
+
+    /// Prints a few lines and then stays attached, like an app that is running.
+    func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            [
+                "Harbor 4.2 (812) launched",
+                "session: restored for user 1042",
+                "network: GET /v2/catalog → 200 in 184 ms",
+                "catalog: 126 items, 4 collections",
+                "network: GET /v2/cart → 200 in 96 ms",
+                "push: registered for remote notifications",
+            ].forEach { continuation.yield($0) }
+        }
+    }
+
+    func uninstall(bundleIdentifier: String, from device: Device) async throws {}
 }

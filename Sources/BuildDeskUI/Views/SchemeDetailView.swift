@@ -15,6 +15,7 @@ struct SchemeDetailView: View {
                     destination(scheme)
                     actions(scheme)
                     RunProgressView(run: app.run)
+                    ConsoleView(console: app.console)
                     targets(scheme)
                 }
                 .frame(maxWidth: Layout.detailMaxWidth, alignment: .leading)
@@ -42,6 +43,13 @@ struct SchemeDetailView: View {
     }
 
     private func header(_ scheme: Scheme) -> some View {
+        VStack(alignment: .leading, spacing: Layout.spacingSmall) {
+            titleRow(scheme)
+            if let record = app.lastInstall { LastInstallLine(record: record) }
+        }
+    }
+
+    private func titleRow(_ scheme: Scheme) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Layout.spacing) {
             Text(scheme.name)
                 .font(.title.weight(.semibold))
@@ -77,6 +85,12 @@ struct SchemeDetailView: View {
                 .labelsHidden()
                 .fixedSize()
                 .accessibilityIdentifier(AccessibilityID.configurationPicker)
+            }
+            if !app.extraDeviceCandidates.isEmpty {
+                GridRow {
+                    Text("Also install on").foregroundStyle(.secondary).frame(width: Layout.pickerLabelWidth, alignment: .leading)
+                    ExtraDevicesMenu(app: app)
+                }
             }
         }
         .disabled(app.run.isRunning)
@@ -162,6 +176,10 @@ struct SchemeDetailView: View {
                         .accessibilityIdentifier(AccessibilityID.launchToggle)
                 }
                 Spacer()
+                if scheme.isInstallable { InstalledAppMenu(app: app, scheme: scheme) }
+            }
+            if let message = app.uninstallMessage {
+                Text(message).font(.callout).foregroundStyle(.secondary)
             }
             // A disabled button alone does not say why; this line does.
             if let blocker = app.runBlocker, !app.run.isRunning {

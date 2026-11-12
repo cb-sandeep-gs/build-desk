@@ -28,9 +28,12 @@ public final class RunModel {
     public static let diagnosticLimit = 500
 
     public private(set) var phase: RunPhase = .idle
-    public private(set) var request: BuildRequest?
+    /// What is being run, or was run last.
+    public private(set) var job: RunJob?
     /// The steps this run goes through; a build-only run has one.
     public private(set) var steps: [PipelineStep] = []
+    /// How the install went on each device, as each one finishes.
+    public private(set) var deviceOutcomes: [DeviceOutcome] = []
     public private(set) var statuses: [PipelineStep: StepStatus] = [:]
     public private(set) var taskCount = 0
     /// The target being built right now.
@@ -55,6 +58,12 @@ public final class RunModel {
 
     public var isRunning: Bool { phase == .running }
 
+    /// The build request of the current job; nil while an app file is being installed.
+    public var request: BuildRequest? {
+        if case .build(let request) = job { return request }
+        return nil
+    }
+
     /// How far the build step is, from 0 to 1, when a previous build gives something to measure
     /// against. Held just short of 1 until the build really ends: this build may have more tasks.
     public var buildProgress: Double? {
@@ -66,8 +75,18 @@ public final class RunModel {
 
     public func start(_ request: BuildRequest, expectedTaskCount: Int? = nil) {
         guard !isRunning else { return }
-        reset(for: request, expectedTaskCount: expectedTaskCount)
+        reset(for: .build(request), expectedTaskCount: expectedTaskCount)
         let events = builder.run(request)
+        task = Task { [weak self] in
+            await self?.consume(events)
+        }
+    }
+
+    /// Installs an app file, with no build.
+    public func start(_ request: InstallRequest) {
+        guard !isRunning else { return }
+        reset(for: .install(request), expectedTaskCount: nil)
+        let events = builder.install(request)
         task = Task { [weak self] in
             await self?.consume(events)
         }
@@ -83,16 +102,11 @@ public final class RunModel {
         await task?.value
     }
 
-    private func reset(for request: BuildRequest, expectedTaskCount: Int?) {
-        self.request = request
+    private func reset(for job: RunJob, expectedTaskCount: Int?) {
+        self.job = job
         self.expectedTaskCount = expectedTaskCount
-        steps = PipelineStep.allCases.filter { step in
-            switch step {
-            case .build: request.builds
-            case .locate, .install: request.installs
-            case .launch: request.installs && request.launches
-            }
-        }
+        steps = job.steps
+        deviceOutcomes = []
         statuses = Dictionary(uniqueKeysWithValues: steps.map { ($0, StepStatus.pending) })
         taskCount = 0
         currentTarget = nil
@@ -137,6 +151,8 @@ public final class RunModel {
             record(diagnostic)
         case .build(.outcome):
             break
+        case .deviceFinished(let outcome):
+            deviceOutcomes.append(outcome)
         case .finished(let summary):
             self.summary = summary
             logFile = summary.logFile

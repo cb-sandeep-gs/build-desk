@@ -128,7 +128,7 @@ final class BuildPipelineTests: XCTestCase {
             switch event {
             case .stepStarted(let step): labels.append("start \(step.rawValue)")
             case .stepFinished(let step, _): labels.append("end \(step.rawValue)")
-            case .build: break
+            case .build, .deviceFinished: break
             case .finished(let finished): summary = finished
             }
         }

@@ -21,6 +21,7 @@ struct RunProgressView: View {
                     elapsed
                 }
                 status
+                DeviceOutcomesView(outcomes: run.deviceOutcomes)
                 diagnostics
             }
             .padding(Layout.spacing)

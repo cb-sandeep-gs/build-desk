@@ -43,7 +43,9 @@ func run(_ arguments: Arguments) async throws {
     }
     let container = try arguments.container()
     let scheme = try arguments.required(CLI.Option.scheme)
-    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    let discovery = DeviceDiscovery()
+    let device = try await discovery.device(matching: arguments.required(CLI.Option.device))
+    let also = try await extraDevices(arguments, discovery)
     // Without an explicit choice, use the project's own default configuration.
     let configuration = try arguments.options[CLI.Option.configuration]
         ?? ProjectReader().quickSnapshot(of: container).defaultConfiguration
@@ -54,6 +56,7 @@ func run(_ arguments: Arguments) async throws {
         scheme: scheme,
         configuration: configuration,
         device: device,
+        additionalDevices: also,
         builds: !arguments.has(CLI.Flag.installOnly),
         installs: !arguments.has(CLI.Flag.buildOnly),
         launches: !arguments.has(CLI.Flag.noLaunch)
@@ -62,6 +65,44 @@ func run(_ arguments: Arguments) async throws {
 
     for try await event in BuildPipeline().run(request) {
         report(event)
+    }
+}
+
+/// The device named by `--also`, if any.
+func extraDevices(_ arguments: Arguments, _ discovery: DeviceDiscovery) async throws -> [Device] {
+    guard let query = arguments.options[CLI.Option.also] else { return [] }
+    return [try await discovery.device(matching: query)]
+}
+
+func install(_ arguments: Arguments) async throws {
+    let path = try arguments.onlyPositional("app or ipa path")
+    let artifact = try await ArtifactReader().read(URL(fileURLWithPath: path))
+    let discovery = DeviceDiscovery()
+    let devices = [try await discovery.device(matching: arguments.required(CLI.Option.device))]
+        + (try await extraDevices(arguments, discovery))
+    if let misfit = devices.first(where: { !artifact.fits($0) }) {
+        let kind = artifact.isSimulatorBuild ? "a simulator build" : "a device build"
+        throw UsageError(message: "\(artifact.name) is \(kind) and can't be installed on \(misfit.name).")
+    }
+    print("\(artifact.name) \(artifact.version ?? "") (\(artifact.bundleIdentifier)) → \(devices.map(\.name).joined(separator: ", "))")
+    let request = InstallRequest(artifact: artifact, devices: devices, launches: !arguments.has(CLI.Flag.noLaunch))
+    for try await event in BuildPipeline().install(request) {
+        report(event)
+    }
+}
+
+func uninstall(_ arguments: Arguments) async throws {
+    let bundleIdentifier = try arguments.onlyPositional("bundle identifier")
+    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    try await DeviceAppService().uninstall(bundleIdentifier: bundleIdentifier, from: device)
+    print("Removed \(bundleIdentifier) from \(device.name).")
+}
+
+func console(_ arguments: Arguments) async throws {
+    let bundleIdentifier = try arguments.onlyPositional("bundle identifier")
+    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    for try await line in DeviceAppService().console(bundleIdentifier: bundleIdentifier, on: device) {
+        print(line)
     }
 }
 
@@ -80,10 +121,28 @@ func report(_ event: PipelineEvent) {
         Output.error("    error: \(location)\(diagnostic.message)")
     case .build:
         break
+    case .deviceFinished(let outcome):
+        print("    \(outcome.device.name): \(outcome.failure.map { "failed. \($0)" } ?? "done")")
     case .finished(let summary):
-        if let product = summary.product { print("installed \(product.bundleIdentifier)") }
-        print("\(summary.taskCount) build tasks, \(summary.warnings.count) warnings, \(Output.seconds(summary.totalSeconds)) in total")
-        if let log = summary.logFile { print("full log: \(log.path)") }
+        report(summary)
+    }
+}
+
+func report(_ summary: RunSummary) {
+    if let product = summary.product { print("installed \(product.bundleIdentifier)") }
+    print("\(summary.taskCount) build tasks, \(summary.warnings.count) warnings, \(Output.seconds(summary.totalSeconds)) in total")
+    if let log = summary.logFile { print("full log: \(log.path)") }
+}
+
+func perform(_ command: CLI.Command, _ arguments: Arguments) async throws {
+    switch command {
+    case .schemes: try await listSchemes(arguments)
+    case .targets: try listTargets(arguments)
+    case .devices: try await listDevices(arguments)
+    case .run: try await run(arguments)
+    case .install: try await install(arguments)
+    case .uninstall: try await uninstall(arguments)
+    case .console: try await console(arguments)
     }
 }
 
@@ -95,13 +154,7 @@ func main() async -> Int32 {
     }
     raw.removeFirst()
     do {
-        let arguments = try Arguments(raw)
-        switch command {
-        case .schemes: try await listSchemes(arguments)
-        case .targets: try listTargets(arguments)
-        case .devices: try await listDevices(arguments)
-        case .run: try await run(arguments)
-        }
+        try await perform(command, Arguments(raw))
         return 0
     } catch let error as UsageError {
         Output.error("\(error.message)\n\n\(CLI.usage)")
@@ -114,4 +167,15 @@ func main() async -> Int32 {
     }
 }
 
-exit(await main())
+// A stop request (Ctrl-C, or `kill`) cancels the work instead of ending the process outright, so a
+// tool that is running (a build, a console attached to a device) is stopped with it and not left behind.
+let work = Task { await main() }
+let stopSignals = [SIGINT, SIGTERM].map { number in
+    signal(number, SIG_IGN)
+    let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
+    source.setEventHandler { work.cancel() }
+    source.resume()
+    return source
+}
+let status = await work.value
+exit(work.isCancelled ? CLI.ExitCode.stopped : status)

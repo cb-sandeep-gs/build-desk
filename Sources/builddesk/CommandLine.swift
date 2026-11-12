@@ -9,14 +9,18 @@ enum CLI {
         case targets
         case devices
         case run
+        case install
+        case uninstall
+        case console
     }
 
     enum Option {
         static let scheme = "--scheme"
         static let device = "--device"
         static let configuration = "--configuration"
+        static let also = "--also"
         /// Options that are followed by a value.
-        static let withValue: Set<String> = [scheme, device, configuration]
+        static let withValue: Set<String> = [scheme, device, configuration, also]
     }
 
     enum Flag {
@@ -32,6 +36,8 @@ enum CLI {
     enum ExitCode {
         static let failure: Int32 = 1
         static let usage: Int32 = 64
+        /// 128 + SIGINT, what shells report for a command stopped with Ctrl-C.
+        static let stopped: Int32 = 130
     }
 
     static let usage = """
@@ -43,12 +49,20 @@ enum CLI {
       builddesk devices [--json]
       builddesk run <project> --scheme <name> --device <name-or-udid>
                     [--configuration <name>] [--no-launch] [--build-only | --install-only]
+                    [--also <name-or-udid>]
+      builddesk install <app-or-ipa> --device <name-or-udid> [--also <name-or-udid>] [--no-launch]
+      builddesk uninstall <bundle-id> --device <name-or-udid>
+      builddesk console <bundle-id> --device <name-or-udid>
 
     <project> is a .xcodeproj or .xcworkspace.
       --full          also ask xcodebuild for schemes that have no scheme file (slower)
       --no-launch     install the app but don't open it
       --build-only    build the scheme and stop (frameworks, compile checks)
       --install-only  install the app the last build left behind, without rebuilding
+      --also          a second device of the same kind to install the same build on
+
+    install puts a built .app or .ipa on a device. console launches an installed app and
+    prints what it writes to standard output and error until it exits (Ctrl-C to stop).
     """
 }
 
@@ -84,6 +98,12 @@ struct Arguments {
     func required(_ option: String) throws -> String {
         guard let value = options[option] else { throw UsageError(message: "\(option) is required.") }
         return value
+    }
+
+    /// The single positional value of commands that take one (a file path or a bundle identifier).
+    func onlyPositional(_ what: String) throws -> String {
+        guard positionals.count == 1 else { throw UsageError(message: "Give one \(what).") }
+        return positionals[0]
     }
 
     /// The project path every project command takes as its only positional value.

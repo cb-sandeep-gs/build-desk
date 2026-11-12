@@ -40,6 +40,28 @@ public struct BuildPipeline: Sendable {
         }
     }
 
+    /// Installs an app file on the request's devices, and launches it, without building.
+    public func install(_ request: InstallRequest) -> AsyncThrowingStream<PipelineEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    var seconds: [PipelineStep: Double] = [:]
+                    let product = BuiltProduct(appURL: request.artifact.url, bundleIdentifier: request.artifact.bundleIdentifier)
+                    let outcomes = try await deploy(product, to: request.devices, launches: request.launches, &seconds) {
+                        continuation.yield($0)
+                    }
+                    continuation.yield(.finished(RunSummary(
+                        product: product, taskCount: 0, warnings: [], secondsByStep: seconds, logFile: nil, deviceOutcomes: outcomes
+                    )))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     // MARK: - Steps
 
     private func execute(_ request: BuildRequest, emit: Emit) async throws -> RunSummary {
@@ -61,6 +83,7 @@ public struct BuildPipeline: Sendable {
         }
 
         var product: BuiltProduct?
+        var outcomes: [DeviceOutcome] = []
         if request.installs {
             let built = try await step(.locate, &seconds, emit) {
                 let found = try await locateProduct(request)
@@ -71,18 +94,68 @@ public struct BuildPipeline: Sendable {
                 return found
             }
             product = built
-            try await step(.install, &seconds, emit) { try await install(built, on: request.device) }
-            if request.launches {
-                try await step(.launch, &seconds, emit) { try await launch(built, on: request.device) }
-            }
+            outcomes = try await deploy(built, to: request.allDevices, launches: request.launches, &seconds, emit)
         }
         return RunSummary(
             product: product,
             taskCount: report.taskCount,
             warnings: report.warnings,
             secondsByStep: seconds,
-            logFile: logFile
+            logFile: logFile,
+            deviceOutcomes: outcomes
         )
+    }
+
+    /// Installs the app on every device, then launches it on each one it reached. With several
+    /// devices, one that fails does not stop the others; the run fails only if none got the app.
+    private func deploy(
+        _ product: BuiltProduct,
+        to devices: [Device],
+        launches: Bool,
+        _ seconds: inout [PipelineStep: Double],
+        _ emit: Emit
+    ) async throws -> [DeviceOutcome] {
+        var failures: [String: String] = [:]
+
+        try await step(.install, &seconds, emit) {
+            for device in devices {
+                try await attempt(on: device, of: devices, &failures) { try await install(product, on: device) }
+            }
+        }
+        if launches {
+            try await step(.launch, &seconds, emit) {
+                for device in devices where failures[device.id] == nil {
+                    try await attempt(on: device, of: devices, &failures) { try await launch(product, on: device) }
+                }
+            }
+        }
+        let outcomes = devices.map { DeviceOutcome(device: $0, failure: failures[$0.id]) }
+        outcomes.forEach { emit(.deviceFinished($0)) }
+        return outcomes
+    }
+
+    /// Runs one device's part of a step. A failure is rethrown when it leaves no device with the
+    /// app (always the case with a single device); otherwise it is noted and the step goes on.
+    private func attempt(
+        on device: Device,
+        of devices: [Device],
+        _ failures: inout [String: String],
+        _ work: () async throws -> Void
+    ) async throws {
+        do {
+            try await work()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            failures[device.id] = Self.reason(for: error)
+            if failures.count == devices.count { throw error }
+        }
+    }
+
+    /// The tool's own words for a failed step, without the "The install step failed." wrapper.
+    private static func reason(for error: Error) -> String {
+        if case BuildDeskError.stepFailed(_, let message) = error { return message }
+        return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
     /// Runs one step, reporting its start, its end and how long it took.

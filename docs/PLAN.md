@@ -36,7 +36,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
-| BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Not started |
+| BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Done 2026-11-13 |
 
 ## What BD-1 built
 
@@ -84,14 +84,33 @@ Menu keys match Xcode: ⌘R build and install, ⌘B build only, ⌘. stop, ⇧�
 
 The app now keeps running when its window is closed, so the menu bar item stays available.
 
+## What BD-4 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Several devices | `BuildRequest.additionalDevices`, `DeviceOutcome` | "Also install on" ticks more devices of the same kind; one build goes on all of them. A device that fails does not stop the others, and each device's result is listed. |
+| App files | `ArtifactReader`, `InstallRequest`, `ArtifactInstallSheet` | Drop a `.app` or `.ipa` on the window (or choose it in Open): a sheet shows what it is and offers only devices it fits (device build or simulator build). No project is needed. |
+| Console | `DeviceAppService.console`, `ConsoleModel`, `ConsoleView` | More ▸ Open Console relaunches the installed app attached to its output: the newest 2,000 lines, with a filter. It shows what the app prints (`print`, `NSLog`), not unified logging. |
+| Uninstall | `DeviceAppService.uninstall` | More ▸ Uninstall from Device asks for confirmation, then removes the app and its data. |
+| Last install | `InstallRecord`, `SourceStateReader` | Under the scheme name: when it was last installed on the selected device, and the branch and commit it was built from, with a note when tracked files had local changes. |
+
+The command line gained `install`, `uninstall`, `console` and `run --also`. Stopping the tool (Ctrl-C or `kill`)
+now stops whatever it was running, so no build or console session is left behind.
+
+Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
+built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
 Known gaps:
 
 - **Not clicked through by hand yet.** The window and the menu bar popover were checked from rendered snapshots
   and the run path is tested with fakes; the same pipeline ran on a real device from the command line. A person
   still needs to press Build and Install, run a pin and see a notification once.
-- **Install last build** was tried with the real tools only where no build exists (it reports that correctly);
-  the path where a build exists is covered by tests against a fake.
 - **Simulator install and launch** are covered by tests against a fake tool runner, not yet tried on a real simulator.
+- **Several devices at once** and **`.ipa` files** are covered by tests against fakes; only one device was
+  connected and no `.ipa` was at hand.
+- **Uninstall** was not run against a real app, to keep the data of the app on the test device. The tool reports
+  success when asked to remove an app that is not installed, so Build Desk does too.
+- **Console is standard output only.** Unified logging (`os_log`, `Logger`) needs a different tool and is not shown.
 - **A test scheme that also has a Run action** (it runs the host app) is listed under Apps.
 - **Workspace groups:** project references nested in workspace groups with their own paths are not followed.
 - **Progress on the first build of a scheme** is a busy bar; the measured bar needs one earlier build to compare with.

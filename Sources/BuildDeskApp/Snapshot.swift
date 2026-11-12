@@ -16,6 +16,8 @@ enum Snapshot {
         static let dark = "--dark"
         static let welcome = "--welcome"
         static let menu = "--menu"
+        static let installed = "--installed"
+        static let sheet = "--sheet"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -43,16 +45,23 @@ enum Snapshot {
             model = AppModel(environment: .live, store: Demo.scratchStore())
             await model.open(URL(fileURLWithPath: project))
             await model.refreshEnvironment()
+        } else if arguments.contains(Argument.sheet) {
+            model = await Demo.app(showing: .appFile)
         } else {
-            model = await Demo.runningApp()
+            model = await Demo.app(showing: arguments.contains(Argument.installed) ? .installed : .building)
         }
 
-        // The menu bar popover is drawn in a bare window as tall as its content; the main window
-        // in a titled one of the requested size.
-        let isMenu = arguments.contains(Argument.menu)
-        let content: NSView = isMenu
-            ? NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))
-            : NSHostingView(rootView: BuildDeskRootView(app: model, autoloads: false))
+        // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
+        // content; the main window in a titled one of the requested size.
+        let content: NSView
+        if arguments.contains(Argument.menu) {
+            content = NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))
+        } else if arguments.contains(Argument.sheet), let artifact = model.pendingArtifact {
+            content = NSHostingView(rootView: ArtifactInstallSheet(app: model, artifact: artifact).background(.background))
+        } else {
+            content = NSHostingView(rootView: BuildDeskRootView(app: model, autoloads: false))
+        }
+        let isMenu = !(content is NSHostingView<BuildDeskRootView>)
         let frame = CGRect(origin: offscreenOrigin, size: isMenu ? content.fittingSize : size)
         let window = NSWindow(
             contentRect: frame,

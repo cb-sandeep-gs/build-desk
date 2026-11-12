@@ -18,8 +18,32 @@ public protocol DeviceDiscovering: Sendable {
 /// Runs a build, install and launch, reporting progress as events.
 public protocol BuildRunning: Sendable {
     func run(_ request: BuildRequest) -> AsyncThrowingStream<PipelineEvent, Error>
+    /// Installs an app file without building.
+    func install(_ request: InstallRequest) -> AsyncThrowingStream<PipelineEvent, Error>
+}
+
+/// Reads a `.app` or `.ipa` the user chose.
+public protocol ArtifactReading: Sendable {
+    func read(_ url: URL) async throws -> AppArtifact
+}
+
+/// Works with an app that is already on a device.
+public protocol DeviceAppManaging: Sendable {
+    /// Launches the app and delivers what it prints, line by line, until it exits or the
+    /// consumer stops.
+    func console(bundleIdentifier: String, on device: Device) -> AsyncThrowingStream<String, Error>
+    func uninstall(bundleIdentifier: String, from device: Device) async throws
+}
+
+/// Says which branch and commit a project's checkout is on.
+public protocol SourceStateReading: Sendable {
+    /// Nil when the folder is not in a git checkout.
+    func state(of folder: URL) async -> SourceState?
 }
 
 extension ProjectReader: ProjectReading {}
 extension DeviceDiscovery: DeviceDiscovering {}
 extension BuildPipeline: BuildRunning {}
+extension ArtifactReader: ArtifactReading {}
+extension DeviceAppService: DeviceAppManaging {}
+extension SourceStateReader: SourceStateReading {}

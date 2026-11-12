@@ -27,6 +27,12 @@ public struct AppEnvironment: Sendable {
     public let notifier: any RunNotifying
     /// True while Build Desk is the frontmost app; a notification would only repeat what is on screen.
     public let isAppActive: @MainActor @Sendable () -> Bool
+    /// Reads a dropped `.app` or `.ipa`.
+    public let artifacts: any ArtifactReading
+    /// Console and uninstall for installed apps.
+    public let deviceApps: any DeviceAppManaging
+    /// Branch and commit of a project's checkout.
+    public let source: any SourceStateReading
 
     public init(
         reader: any ProjectReading,
@@ -34,7 +40,10 @@ public struct AppEnvironment: Sendable {
         builder: any BuildRunning,
         isXcodeOpen: @escaping @MainActor @Sendable () -> Bool,
         notifier: any RunNotifying = SilentNotifier(),
-        isAppActive: @escaping @MainActor @Sendable () -> Bool = { true }
+        isAppActive: @escaping @MainActor @Sendable () -> Bool = { true },
+        artifacts: any ArtifactReading = InertServices(),
+        deviceApps: any DeviceAppManaging = InertServices(),
+        source: any SourceStateReading = InertServices()
     ) {
         self.reader = reader
         self.discovery = discovery
@@ -42,6 +51,9 @@ public struct AppEnvironment: Sendable {
         self.isXcodeOpen = isXcodeOpen
         self.notifier = notifier
         self.isAppActive = isAppActive
+        self.artifacts = artifacts
+        self.deviceApps = deviceApps
+        self.source = source
     }
 }
 
@@ -61,6 +73,7 @@ public final class PreferenceStore {
         static let launchesAfterInstall = "launchesAfterInstall"
         static let taskCounts = "taskCounts"
         static let pins = "pins"
+        static let installRecords = "installRecords"
     }
 
     /// How many recently opened projects are remembered.
@@ -112,6 +125,14 @@ public final class PreferenceStore {
     public var pins: [PinnedRun] {
         get { defaults.data(forKey: Key.pins).flatMap { try? JSONDecoder().decode([PinnedRun].self, from: $0) } ?? [] }
         set { defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.pins) }
+    }
+
+    /// The last install of each scheme on each device, by `InstallRecord.key`.
+    public var installRecords: [String: InstallRecord] {
+        get {
+            defaults.data(forKey: Key.installRecords).flatMap { try? JSONDecoder().decode([String: InstallRecord].self, from: $0) } ?? [:]
+        }
+        set { defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.installRecords) }
     }
 
     private func dictionary(_ key: String) -> [String: String] {

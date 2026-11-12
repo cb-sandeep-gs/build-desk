@@ -15,6 +15,9 @@ public enum Layout {
     static let detailMaxWidth: CGFloat = 820
     static let welcomeWidth: CGFloat = 420
     public static let menuBarWidth: CGFloat = 330
+    public static let sheetWidth: CGFloat = 460
+    static let consoleHeight: CGFloat = 220
+    static let consoleFilterWidth: CGFloat = 160
 
     static let spacingSmall: CGFloat = 6
     static let spacing: CGFloat = 12
@@ -43,6 +46,9 @@ public enum AccessibilityID {
     public static let installOnlyButton = "install-only-button"
     public static let pinButton = "pin-button"
     public static let menuBarPins = "menu-bar-pins"
+    public static let console = "console"
+    public static let moreMenu = "more-menu"
+    public static let extraDevices = "extra-devices"
     public static let stopButton = "stop-button"
     public static let launchToggle = "launch-toggle"
     public static let runStatus = "run-status"
