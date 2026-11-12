@@ -106,8 +106,12 @@ public struct MenuBarView: View {
                 .fixedSize(horizontal: false, vertical: true)
         } else {
             VStack(spacing: Layout.spacingSmall) {
+                if app.pins.count > 1 { queueControls }
                 ForEach(app.pins) { pin in
-                    PinRow(pin: pin, device: app.device(for: pin), isBusy: app.run.isRunning) {
+                    PinRow(
+                        pin: pin, device: app.device(for: pin), queueState: app.queue.state(of: pin),
+                        isBusy: app.run.isRunning || app.queue.isRunning
+                    ) {
                         Task { await app.run(pin) }
                     } remove: {
                         app.remove(pin)
@@ -119,16 +123,47 @@ public struct MenuBarView: View {
     }
 }
 
+extension MenuBarView {
+    /// Runs every pin in turn, or stops the queue that is running.
+    private var queueControls: some View {
+        HStack {
+            Text(app.queue.isRunning ? "Running all pins…" : "Pins").font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            if app.queue.isRunning {
+                Button("Stop All") { app.queue.stop() }
+            } else {
+                Button("Run All") { app.queue.start(app.pins, mode: .buildAndInstall) }
+                    .disabled(app.run.isRunning || app.tests.isRunning)
+                    .help("Build and install every pin, one after another")
+            }
+        }
+        .buttonStyle(.link)
+        .accessibilityIdentifier(AccessibilityID.runAllButton)
+    }
+}
+
 /// One pinned pair with its one-click button.
 private struct PinRow: View {
     let pin: PinnedRun
     /// The pin's device as this Mac sees it now; nil when it is not known at all.
     let device: Device?
+    /// Where the pin stands in a running or finished queue; nil outside one.
+    let queueState: QueueModel.State?
     let isBusy: Bool
     let run: () -> Void
     let remove: () -> Void
 
     private var isReady: Bool { device?.isReady == true }
+
+    @ViewBuilder private var queueMark: some View {
+        switch queueState {
+        case .none, .waiting: EmptyView()
+        case .running: ProgressView().controlSize(.small)
+        case .succeeded: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).accessibilityLabel("succeeded")
+        case .failed(let message): Image(systemName: "xmark.circle.fill").foregroundStyle(.red).help(message).accessibilityLabel("failed")
+        case .skipped: Image(systemName: "minus.circle").foregroundStyle(.secondary).accessibilityLabel("skipped")
+        }
+    }
 
     /// "Debug · Test iPhone", with what is special about this pin or wrong with its device.
     private var subtitle: String {
@@ -150,6 +185,7 @@ private struct PinRow: View {
                     .lineLimit(1)
             }
             Spacer()
+            queueMark
             Button("Build and install \(pin.scheme) on \(pin.deviceName)", systemImage: "play.fill", action: run)
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)

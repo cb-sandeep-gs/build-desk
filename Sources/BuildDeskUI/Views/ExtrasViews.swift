@@ -288,3 +288,43 @@ struct InstalledAppMenu: View {
         }
     }
 }
+
+/// The app's settings: the daily build of the pins.
+public struct SettingsView: View {
+    @Bindable var schedule: ScheduleModel
+    let pinCount: Int
+
+    public init(app: AppModel) {
+        schedule = app.schedule
+        pinCount = app.pins.count
+    }
+
+    public var body: some View {
+        Form {
+            Section {
+                Toggle("Build the pins every day", isOn: $schedule.isEnabled)
+                    .accessibilityIdentifier(AccessibilityID.scheduleToggle)
+                DatePicker("At", selection: $schedule.time, displayedComponents: .hourAndMinute)
+                    .disabled(!schedule.isEnabled)
+            } footer: {
+                VStack(alignment: .leading, spacing: Layout.spacingSmall) {
+                    Text("Each pin is built, not installed, so the first build of your day is a quick one. "
+                        + "This happens only while Build Desk is open; add it to your Login Items to have it ready each morning.")
+                    if pinCount == 0 {
+                        Text("Nothing is pinned yet, so there is nothing to build.").foregroundStyle(.orange)
+                    }
+                    if let lastFired = schedule.lastFired {
+                        Text("Last run: \(lastFired.formatted(date: .abbreviated, time: .shortened))")
+                    }
+                }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: Layout.settingsWidth)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}

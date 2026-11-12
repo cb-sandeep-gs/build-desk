@@ -1,13 +1,13 @@
 # Build Desk — roadmap
 
 What is left to finish, what to build next, and where the tool could go. Written 2026-11-13, after phases BD-0 to
-BD-5. BD-6, BD-7 and BD-8 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
+BD-5. BD-6 to BD-9 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
 
 ## Where it stands
 
 Build Desk builds any scheme of an Xcode project, installs it on real devices and simulators and launches it, with
 Xcode closed. It has a main window, a menu bar item with one-click pins, a command-line tool, a project settings
-file for teams, a release script, run history with a new-warning diff, a build folder panel, launch options per pin and a test runner. It has 163 tests.
+file for teams, a release script, run history with a new-warning diff, a build folder panel, launch options per pin, a test runner, a build queue and a daily build. It has 170 tests.
 
 | Area | State |
 |---|---|
@@ -58,14 +58,8 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 
 | Phase | What it adds | Size | Depends on |
 |---|---|---|---|
-| BD-9 Build queue | Several schemes one after another; scheduled builds | M | — |
 | BD-10 Device tools | Screenshot, crash logs, app data folder, unified logs | L | Research |
 | BD-11 Distribution | Auto-update, app icon, checks on push | M | First signed release |
-
-### BD-9 Build queue
-
-- Queue several schemes (for example two apps of one project) and get one notification at the end.
-- Scheduled builds: build a pin every morning so the first build of the day is incremental.
 
 ### BD-10 Device tools
 
@@ -79,6 +73,15 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
   a small updater against GitHub releases.
 - App icon.
 - Checks on push and a release workflow that runs `Scripts/release.sh` on a tagged commit.
+
+### Follow-ups to what is built
+
+| Item | What it would add |
+|---|---|
+| Daily build without the app open | A login item or launch agent, so the daily build does not depend on Build Desk running. It changes a system setting, so it needs a clear switch and the person's consent. |
+| Build for "any device" | A scheduled build of a pin whose phone is not connected fails today; a generic destination would let it build anyway. |
+| Test history | Test runs are not kept in the run history; pass and fail counts over time would show flaky tests. |
+| Queue from the window | The queue is started from the menu bar and the Build menu; the window could show its progress too. |
 
 ## 3. Potentials
 
@@ -108,5 +111,4 @@ Larger directions. Each would need its own plan before any code.
 ## 5. Suggested order
 
 1. Finish section 1 "Needs a person": use the app by hand, make the first signed release, move the repository.
-2. BD-9 Build queue.
-3. Decide on the questions in section 4, then pick from BD-9 to BD-11 and the potentials.
+2. Decide on the questions in section 4, then pick from BD-9 to BD-11 and the potentials.

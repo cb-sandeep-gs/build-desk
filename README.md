@@ -8,7 +8,7 @@ must be installed but never needs to be running. Signing uses the Apple account 
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
 window (BD-2), the menu bar item (BD-3), the extras (BD-4), what a team needs to share it (BD-5: project
-settings file, device checks, release script), build insight (BD-6), launch options (BD-7) and running tests (BD-8). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
+settings file, device checks, release script), build insight (BD-6), launch options (BD-7), running tests (BD-8) and a build queue with a daily build (BD-9). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
 is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Use the app
@@ -59,6 +59,12 @@ deletes it after a confirmation; the next build is then a full one.
 **Menu bar.** Press **Pin** in the window to keep the current scheme, configuration and device in the menu bar.
 The hammer icon there opens a list of your pins, each with a one-click build and install, plus the progress of
 the current run. The app keeps running when its window is closed; quit it from the popover or with ⌘Q.
+
+**Run all pins.** With two or more pins, **Run All** in the popover builds and installs them one after another
+and sends one notification at the end. A pin that fails does not stop the others.
+
+**Daily build.** In Settings (⌘,), **Build the pins every day** builds each pin at a set time, without
+installing, so your first build of the day is quick. It runs only while Build Desk is open.
 
 **Notifications.** When a run ends while you are in another app, Build Desk posts a notification with the result.
 macOS asks for permission the first time.

@@ -59,8 +59,14 @@ struct FakeBuilder: BuildRunning {
         return play()
     }
 
+    /// Schemes whose builds fail, whatever the script says.
+    let failingSchemes = Locked<Set<String>>([])
+
     func run(_ request: BuildRequest) -> AsyncThrowingStream<PipelineEvent, Error> {
         requests.value += [request]
+        guard !failingSchemes.value.contains(request.scheme) else {
+            return AsyncThrowingStream { $0.finish(throwing: BuildDeskError.buildFailed(errors: [], logFile: nil)) }
+        }
         return play()
     }
 

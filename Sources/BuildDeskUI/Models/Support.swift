@@ -87,7 +87,12 @@ public final class PreferenceStore {
         static let pins = "pins"
         static let installRecords = "installRecords"
         static let launchTexts = "launchTexts"
+        static let scheduleIsEnabled = "scheduleIsEnabled"
+        static let scheduleMinuteOfDay = "scheduleMinuteOfDay"
     }
+
+    /// 09:00, a little before most working days start.
+    public static let defaultScheduleMinuteOfDay = 9 * 60
 
     /// How many recently opened projects are remembered.
     public static let recentProjectLimit = 8
@@ -152,6 +157,18 @@ public final class PreferenceStore {
     public var launchTexts: [String: LaunchTexts] {
         get { defaults.data(forKey: Key.launchTexts).flatMap { try? JSONDecoder().decode([String: LaunchTexts].self, from: $0) } ?? [:] }
         set { defaults.set(try? JSONEncoder().encode(newValue), forKey: Key.launchTexts) }
+    }
+
+    /// Whether the pins are built once a day.
+    public var scheduleIsEnabled: Bool {
+        get { defaults.bool(forKey: Key.scheduleIsEnabled) }
+        set { defaults.set(newValue, forKey: Key.scheduleIsEnabled) }
+    }
+
+    /// The time of that daily build, in minutes after midnight.
+    public var scheduleMinuteOfDay: Int {
+        get { defaults.object(forKey: Key.scheduleMinuteOfDay) as? Int ?? Self.defaultScheduleMinuteOfDay }
+        set { defaults.set(newValue, forKey: Key.scheduleMinuteOfDay) }
     }
 
     private func dictionary(_ key: String) -> [String: String] {

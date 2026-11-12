@@ -10,6 +10,8 @@ struct BuildDeskApp: App {
     var body: some Scene {
         Window("Build Desk", id: WindowID.main) {
             BuildDeskRootView(app: model)
+                // The daily build starts counting as soon as the app is up.
+                .task { model.schedule.restart() }
         }
         .defaultSize(width: Layout.windowDefaultWidth, height: Layout.windowDefaultHeight)
         .windowResizability(.contentMinSize)
@@ -35,11 +37,15 @@ struct BuildDeskApp: App {
                     .keyboardShortcut("u")
                     .disabled(model.runBlocker != nil || !model.canTestSelection)
                 Button("Stop") {
-                    model.run.stop()
+                    // Stopping the queue stops its running build too.
+                    if model.queue.isRunning { model.queue.stop() } else { model.run.stop() }
                     model.tests.stop()
                 }
                 .keyboardShortcut(".")
                 .disabled(!model.run.isRunning && !model.tests.isRunning)
+                Button("Run All Pins") { model.queue.start(model.pins, mode: .buildAndInstall) }
+                    .keyboardShortcut("r", modifiers: [.command, .option])
+                    .disabled(model.pins.isEmpty || model.queue.isRunning || model.run.isRunning || model.tests.isRunning)
                 Divider()
                 Button("Reload Schemes and Devices") {
                     Task {
@@ -49,6 +55,10 @@ struct BuildDeskApp: App {
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
+        }
+
+        Settings {
+            SettingsView(app: model)
         }
 
         // The hammer fills while a build is running, so progress is visible from any app.

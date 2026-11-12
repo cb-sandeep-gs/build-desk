@@ -19,6 +19,7 @@ enum Snapshot {
         static let installed = "--installed"
         static let sheet = "--sheet"
         static let tested = "--tested"
+        static let settings = "--settings"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -62,7 +63,9 @@ enum Snapshot {
         // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
         // content; the main window in a titled one of the requested size.
         let content: NSView
-        if arguments.contains(Argument.menu) {
+        if arguments.contains(Argument.settings) {
+            content = NSHostingView(rootView: SettingsView(app: model).background(.background))
+        } else if arguments.contains(Argument.menu) {
             content = NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))
         } else if arguments.contains(Argument.sheet), let artifact = model.pendingArtifact {
             content = NSHostingView(rootView: ArtifactInstallSheet(app: model, artifact: artifact).background(.background))

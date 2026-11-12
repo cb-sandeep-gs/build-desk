@@ -11,6 +11,8 @@ public final class AppModel {
     public let run: RunModel
     public let console: ConsoleModel
     public let tests: TestRunModel
+    public let queue = QueueModel()
+    public let schedule: ScheduleModel
     public internal(set) var recentProjects: [URL]
     /// Why the last attempt to open a project failed, until the next attempt.
     public internal(set) var openError: String?
@@ -61,11 +63,15 @@ public final class AppModel {
         run = RunModel(builder: environment.builder)
         console = ConsoleModel(service: environment.deviceApps)
         tests = TestRunModel(tester: environment.tester)
+        schedule = ScheduleModel(store: store)
         installRecords = store.installRecords
         launchTexts = store.launchTexts
         recentProjects = store.recentProjects
         launchesAfterInstall = store.launchesAfterInstall
         pins = store.pins
+        // Last, once every property has its value: the queue and the schedule drive this model.
+        queue.app = self
+        schedule.app = self
     }
 
     // MARK: - Projects
@@ -227,9 +233,15 @@ public final class AppModel {
         }
     }
 
-    /// Someone looking at the window has already seen the result.
+    /// Someone looking at the window has already seen the result. During a queue, the queue
+    /// announces once at its end instead of once per build.
     func announceIfInBackground() async {
+        guard !queue.isRunning else { return }
         if !environment.isAppActive(), let notice = RunNotice.make(for: run) { await environment.notifier.post(notice) }
+    }
+
+    func announceQueueFinished() async {
+        if !environment.isAppActive(), let notice = queue.notice { await environment.notifier.post(notice) }
     }
 
     /// The key a build's task count is remembered under. Simulator and device builds of one
@@ -270,8 +282,8 @@ public final class AppModel {
     }
 
     /// Runs a pin: opens its project if another is open, selects its scheme, configuration and
-    /// device, then builds and installs.
-    public func run(_ pin: PinnedRun) async {
+    /// device, then builds and installs (or only builds).
+    public func run(_ pin: PinnedRun, mode: RunMode = .buildAndInstall) async {
         guard !run.isRunning else { return }
         pinError = nil
         if project?.container.url != pin.project { await open(pin.project) }
@@ -291,6 +303,6 @@ public final class AppModel {
             pinError = (self.device(for: pin)?.issue ?? .notConnected).fix(for: pin.deviceName)
             return
         }
-        runSelected(.buildAndInstall)
+        runSelected(mode)
     }
 }

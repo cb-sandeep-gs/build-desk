@@ -16,6 +16,7 @@ public enum Layout {
     static let welcomeWidth: CGFloat = 420
     public static let menuBarWidth: CGFloat = 330
     public static let sheetWidth: CGFloat = 460
+    public static let settingsWidth: CGFloat = 440
     static let consoleHeight: CGFloat = 220
     static let consoleFilterWidth: CGFloat = 160
     static let trendHeight: CGFloat = 64
@@ -58,6 +59,8 @@ public enum AccessibilityID {
     public static let launchOptions = "launch-options"
     public static let testButton = "test-button"
     public static let testResults = "test-results"
+    public static let runAllButton = "run-all-button"
+    public static let scheduleToggle = "schedule-toggle"
     public static let history = "history"
     public static let cleanButton = "clean-button"
     public static let stopButton = "stop-button"

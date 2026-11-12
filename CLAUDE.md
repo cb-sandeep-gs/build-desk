@@ -78,6 +78,7 @@ and dark:
 .build/debug/BuildDeskApp --snapshot after.png --installed  # last-install line and console
 .build/debug/BuildDeskApp --snapshot sheet.png --sheet      # the app-file sheet
 .build/debug/BuildDeskApp --snapshot tests.png --tested     # test results
+.build/debug/BuildDeskApp --snapshot prefs.png --settings   # the Settings window
 ```
 
 ## Testing against a real project

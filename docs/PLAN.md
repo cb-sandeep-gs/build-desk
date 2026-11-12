@@ -38,6 +38,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-9 Build queue | Run every pin one after another with one notification; build the pins once a day. | Done 2026-11-13 |
 | BD-8 Run tests | Run a scheme's tests, or one class or test, with results per test and a re-run of the failed ones. | Done 2026-11-13 |
 | BD-7 Launch options | Arguments, environment variables and a link for the launch, per scheme and per pin. | Done 2026-11-13 |
 | BD-6 Build insight | Run history, new-warning diff, build-time trend, build folder size with Clean. | Done 2026-11-13 |
@@ -105,6 +106,13 @@ now stops whatever it was running, so no build or console session is left behind
 
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
+## What BD-9 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Queue | `QueueModel` | Run All in the menu bar popover (and ⌥⌘R) builds and installs every pin in order. A pin that fails, or whose device is away, does not stop the ones after it. Each pin shows its result, and one notification sums up the queue in place of one per build. Stop All stops the running build and skips the rest. |
+| Daily build | `ScheduleModel`, `SettingsView` | Settings (⌘,) has "Build the pins every day" with a time. At that time each pin is built, not installed, so the first build of the day is a quick one. It runs only while Build Desk is open, and is skipped when something is already running. No system setting is changed. |
 
 ## What BD-8 built
 
