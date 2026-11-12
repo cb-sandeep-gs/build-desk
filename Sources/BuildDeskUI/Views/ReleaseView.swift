@@ -48,6 +48,7 @@ struct ReleaseView: View {
             VStack(alignment: .leading, spacing: Layout.spacingLarge) {
                 header(status)
                 if let app = release.selectedApp {
+                    storeAlerts
                     cards(app)
                     if release.canAct { actions(app) }
                     builds
@@ -84,6 +85,22 @@ struct ReleaseView: View {
         }
     }
 
+    /// What needs attention on the store's side, and the state of the connection to it.
+    @ViewBuilder private var storeAlerts: some View {
+        ForEach(release.storeApp?.alerts ?? [], id: \.message) { alert in
+            Label(alert.message, systemImage: alert.isError ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
+                .font(.callout)
+                .padding(Layout.spacing)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    (alert.isError ? Color.red : Color.orange).opacity(0.15), in: RoundedRectangle(cornerRadius: Layout.cornerRadius)
+                )
+        }
+        if let note = release.storeNote {
+            Label(note, systemImage: "network").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+        }
+    }
+
     /// Each button opens a sheet that previews the action; nothing is done from here.
     private func actions(_ app: ReleaseApp) -> some View {
         HStack(spacing: Layout.spacing) {
@@ -112,6 +129,10 @@ struct ReleaseView: View {
                 title: "On the store", value: app.store?.version ?? "None",
                 detail: app.commitsSinceStore.map { "\($0.formatted()) commits since" }
             )
+            // The version being prepared on the store's side, when the store is connected.
+            if let next = release.storeApp?.storeVersions?.first, let state = next.state {
+                SummaryCard(title: "Next on the store", value: next.version, detail: state)
+            }
             ForEach(app.tracks) { track in
                 SummaryCard(
                     title: track.name, value: track.latest?.version ?? "No build yet",
@@ -131,7 +152,8 @@ struct ReleaseView: View {
                     ForEach(Array(release.builds.enumerated()), id: \.element.id) { index, build in
                         if index > 0 { Divider() }
                         BuildRow(
-                            build: build, track: release.trackName(of: build), isOpen: release.selectedBuildID == build.id
+                            build: build, track: release.trackName(of: build), store: release.storeBuild(for: build),
+                            isOpen: release.selectedBuildID == build.id
                         ) {
                             release.selectedBuildID = release.selectedBuildID == build.id ? nil : build.id
                         }
@@ -162,10 +184,41 @@ private struct SummaryCard: View {
     }
 }
 
+/// A build's cloud run and testing state, in a few words.
+private struct StoreState: View {
+    let store: ReleaseStoreBuild
+
+    var body: some View {
+        HStack(spacing: Layout.spacingSmall) {
+            switch store.cloudState {
+            case .running: ProgressView().controlSize(.mini)
+            case .succeeded: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            case .failed: Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+            case nil: EmptyView()
+            }
+            Text(text).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The testing state once the build reached testers; before that, how its cloud build is going.
+    private var text: String {
+        if let testing = store.testing { return testing }
+        switch store.cloudState {
+        case .running: return "Building in the cloud"
+        case .failed: return "Cloud build failed"
+        case .succeeded: return "Built"
+        case nil: return ""
+        }
+    }
+}
+
 /// One build; a click opens its details in place.
 private struct BuildRow: View {
     let build: ReleaseBuild
     let track: String
+    /// The build's live state, when the store is connected and lists it.
+    let store: ReleaseStoreBuild?
     let isOpen: Bool
     let toggle: () -> Void
 
@@ -177,6 +230,7 @@ private struct BuildRow: View {
                         .font(.caption).foregroundStyle(.secondary).frame(width: Layout.iconColumnWidth)
                     Text(build.version).monospacedDigit()
                     Badge(text: track, symbol: build.kind == .store ? "bag" : "paperplane")
+                    if let store { StoreState(store: store) }
                     Spacer()
                     if let date = build.date {
                         Text(Date(timeIntervalSince1970: date).formatted(.relative(presentation: .named)))
@@ -199,6 +253,9 @@ private struct BuildRow: View {
             if let commit = build.commit { row("Commit", String(commit.prefix(Layout.shortCommitLength))) }
             if let branch = build.branch { row("Branch", branch) }
             if let from = build.from { row("Shipped build", from) }
+            if let number = store?.number, !number.isEmpty { row("Store build", number) }
+            if let workflow = store?.cloudDetail { row("Cloud workflow", workflow) }
+            if let groups = store?.groups, !groups.isEmpty { row("Tester groups", groups.formatted(.list(type: .and))) }
             if let notes = build.notes { row("Notes", notes) }
         }
         .font(.callout)

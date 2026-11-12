@@ -133,4 +133,8 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
     public func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult {
         throw BuildDeskError.releaseCommandMissing(name: "run")
     }
+
+    public func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus {
+        throw BuildDeskError.releaseCommandMissing(name: "store")
+    }
 }

@@ -57,7 +57,8 @@ tests on the selected device or simulator and lists the failures first, each wit
 appears in the toolbar. Release shows each app's version in code, what is on the store, the latest build per
 track and the recent builds, all read through the project's own commands. **New Test Build** and **Store
 Release** open a sheet that first shows what will happen (the steps and the notes); nothing is tagged or pushed
-until you press the confirm button, which names what it will create.
+until you press the confirm button, which names what it will create. When the project also has a store
+command and you are connected, each build shows how its cloud build went and whether it is in testing.
 
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
@@ -149,6 +150,7 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk appdata <bundle-id> --device <name-or-udid> --output <folder>` | Copies an installed app's data folder. |
 | `builddesk crashes <process-name> --device <name-or-udid>` | Lists the app's crash logs, newest first; `--output <folder>` copies them. |
 | `builddesk release status <project>` | Where each app stands: version, store release and the latest build per track, from the project's own release commands. |
+| `builddesk release store <project>` | Each build's cloud build result, testing state and tester groups. |
 | `builddesk release plan <project> --action testflight\|store --app <id>` | What a release action would do, with its notes. Changes nothing. |
 | `builddesk test <project> --scheme <name> --device <name-or-udid>` | Runs the scheme's tests and prints the failures. `--only <Bundle[/Class[/test]]>` limits the run. Exits with 2 when tests failed. |
 

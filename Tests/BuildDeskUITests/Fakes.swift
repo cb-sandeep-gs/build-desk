@@ -176,6 +176,18 @@ enum Sample {
         branches: ["develop", "main"]
     )
 
+    static let storeStatus = ReleaseStoreStatus(connected: true, apps: [
+        ReleaseStoreApp(
+            id: "sample",
+            builds: [ReleaseStoreBuild(
+                id: "SampleInternal-4.2.3", number: "812", cloud: "succeeded", cloudDetail: "Release workflow",
+                testing: "In testing", groups: ["Staff"]
+            )],
+            storeVersions: [ReleaseStoreVersion(version: "4.2", state: "Prepare for submission")],
+            alerts: [ReleaseAlert(severity: "error", message: "Build 800 is in a partner group")]
+        ),
+    ])
+
     static let releasePlan = ReleasePlan(
         title: "SampleInternal-4.2.4", steps: ["Create tag SampleInternal-4.2.4 on a41c9e2", "Push the tag"],
         notes: "Faster search", commit: "a41c9e2"
@@ -331,6 +343,14 @@ struct FakeReleases: ReleaseProviding {
     func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult {
         ran.value += ["\(action.kind.rawValue) \(plan.title), confirming \(plan.commit ?? "none")"]
         return try result.value.get()
+    }
+
+    let storeStatus = Locked<Result<ReleaseStoreStatus, BuildDeskError>>(.success(Sample.storeStatus))
+    let storeCalls = Locked(0)
+
+    func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus {
+        storeCalls.value += 1
+        return try storeStatus.value.get()
     }
 }
 

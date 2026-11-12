@@ -189,3 +189,45 @@ final class Locked<Value: Sendable>: @unchecked Sendable {
         }
     }
 }
+
+final class ReleaseStoreContractTests: XCTestCase {
+    private let provider = ReleaseProvider(
+        commands: ReleaseCommands(status: ["./tool", "status"], store: ["./tool", "store"]), folder: URL(fileURLWithPath: "/projects/shop")
+    )
+
+    func testStoreStateIsRead() async throws {
+        let runner = FakeToolRunner()
+        let json = """
+        {"contract":1,"connected":true,"hint":null,"apps":[{"id":"shop",
+          "builds":[{"id":"ShopInternal-4.2.3","number":"812","cloud":"running","cloudDetail":"Release workflow","testing":null},
+                    {"id":"ShopInternal-4.2.2","cloud":"succeeded","testing":"In testing","groups":["Staff"]}],
+          "storeVersions":[{"version":"4.2","state":"Prepare for submission"}],
+          "alerts":[{"severity":"warning","message":"runs: not visible to this key"}]}]}
+        """
+        runner.onRun = { _ in ToolResult(exitCode: 0, stdout: Data(json.utf8)) }
+
+        let store = try await ReleaseClient(toolRunner: runner).store(provider)
+
+        XCTAssertTrue(store.connected)
+        XCTAssertEqual(store.apps.first?.builds.map(\.cloudState), [.running, .succeeded])
+        XCTAssertEqual(store.apps.first?.builds.last?.groups, ["Staff"])
+        XCTAssertEqual(store.apps.first?.alerts?.first?.isError, false)
+        XCTAssertEqual(runner.commands.first?.arguments, ["store"])
+    }
+
+    func testNotConnectedIsAnAnswerAndAMissingCommandIsNot() async throws {
+        let runner = FakeToolRunner()
+        let notConnected = #"{"contract":1,"connected":false,"hint":"Log in first.","apps":[]}"#
+        runner.onRun = { _ in ToolResult(exitCode: 0, stdout: Data(notConnected.utf8)) }
+        let store = try await ReleaseClient(toolRunner: runner).store(provider)
+        XCTAssertEqual(store, ReleaseStoreStatus(connected: false, hint: "Log in first."))
+
+        let noStore = ReleaseProvider(commands: ReleaseCommands(status: ["./tool"]), folder: provider.folder)
+        do {
+            _ = try await ReleaseClient(toolRunner: runner).store(noStore)
+            XCTFail("expected a failure")
+        } catch {
+            XCTAssertEqual(error as? BuildDeskError, .releaseCommandMissing(name: "store"))
+        }
+    }
+}

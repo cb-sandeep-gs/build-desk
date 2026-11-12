@@ -181,7 +181,9 @@ public enum Demo {
             defaultConfiguration: "Release",
             config: ProjectConfig(
                 favoriteSchemes: ["Harbor", "Harbor Staging"], hiddenSchemes: ["*Tests"],
-                release: ReleaseCommands(status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"])
+                release: ReleaseCommands(
+                    status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"], store: ["./tool", "store"]
+                )
             ),
             configFolder: URL(fileURLWithPath: "/Projects/Harbor")
         )
@@ -346,5 +348,22 @@ private struct DemoRelease: ReleaseProviding {
 
     func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult {
         ReleaseResult(result: plan.title, done: ["Created tag \(plan.title)", "Pushed the tag"])
+    }
+
+    func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus {
+        ReleaseStoreStatus(connected: true, apps: [
+            ReleaseStoreApp(
+                id: "harbor",
+                builds: [
+                    ReleaseStoreBuild(id: "HarborInternal-4.2.3", number: "812", cloud: "running", cloudDetail: "Release workflow"),
+                    ReleaseStoreBuild(id: "HarborInternal-4.2.2", number: "811", cloud: "succeeded", cloudDetail: "Release workflow",
+                                      testing: "In testing", groups: ["Staff"]),
+                    ReleaseStoreBuild(id: "HarborPartner-4.2.1", number: "809", cloud: "succeeded", cloudDetail: "Partner workflow",
+                                      testing: "In testing", groups: ["Payment partners"]),
+                    ReleaseStoreBuild(id: "HarborInternal-4.2.1", number: "805", cloud: "failed", cloudDetail: "Release workflow"),
+                ],
+                storeVersions: [ReleaseStoreVersion(version: "4.2", state: "Prepare for submission")]
+            ),
+        ])
     }
 }

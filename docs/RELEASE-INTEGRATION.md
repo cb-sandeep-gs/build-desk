@@ -1,7 +1,7 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Steps R0, R1 and R2 are built; R3 and R4 are not. The contract itself is described for providers in
+Written 2026-11-13. Steps R0, R1 and R2 are built, and the read-only half of R3; the rest of R3 and R4 are not. The contract itself is described for providers in
 [release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
@@ -87,7 +87,7 @@ the action in full ("Create tag and push"). Nothing is run from a preview.
 | R0 Contract (done 2026-11-13) | The contract and its schema; the `release` section of `.builddesk.json`; a provider for the first project that prints status, plan and run as JSON | Both repositories |
 | R1 Read-only Release mode (done 2026-11-13) | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
 | R2 Tagging (done 2026-11-13) | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
-| R3 Store | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
+| R3 Store (reading done 2026-11-13) | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
 | R4 Build Desk extras | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
 
 R1 and R2 need no store credentials. R3 shows "not connected" until the person has connected the provider.
@@ -133,6 +133,22 @@ A build's full notes and its commits are not shown yet: the contract has no comm
 The run path was not tried against the first provider, on purpose: it pushes a tag and starts a cloud build. It is
 covered by tests on both sides (a fake provider here, a recorded script runner there). The preview path was tried
 for real in R0.
+
+## What R3 built so far
+
+| Part | Where | What it does |
+|---|---|---|
+| Contract | `ReleaseStoreStatus`, `ReleaseStoreBuild`, the `store` command | Per build: how its cloud run went (running, succeeded, failed), its testing state in words and its tester groups; per app: the versions on the store's side and alerts. "Not connected" is an answer with the provider's instruction, not an error. |
+| Model | `ReleaseModel.store`, `storeBuild(for:)`, `storeNote` | The store is asked after the status, so the status shows at once and the live part fills in. A failure or a missing connection leaves the status usable and adds one line saying why. |
+| Window | `ReleaseView` | Each build shows its cloud result and testing state; opening it adds the store build number, the workflow and the tester groups. A card shows the version being prepared on the store. Alerts appear at the top. |
+| Command line | `builddesk release store` | The same state as a table or JSON. |
+
+Tried with the first provider and a real store key: both apps' builds came back with their cloud results, testing
+state and groups in about six seconds, including one build whose cloud run had failed.
+
+Not built in R3: editing the tester notes of a build and adding a build to a tester group. Both write to the store
+on the person's behalf, so they need a decision on how the contract describes per-build actions, and they cannot
+be tried without changing a real build.
 
 ## The first provider
 

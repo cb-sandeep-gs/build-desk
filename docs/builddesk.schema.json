@@ -73,7 +73,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Prints live state from the store. Reserved."
+          "description": "Prints live state from the store: per build its cloud run, testing state and tester groups. Read-only."
         }
       }
     }

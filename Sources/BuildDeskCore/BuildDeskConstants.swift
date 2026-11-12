@@ -3,7 +3,7 @@ import Foundation
 /// Every tool path, file name and limit Build Desk uses, in one place.
 public enum BuildDeskConstants {
     /// The version of the app and the command-line tool. `Scripts/build-app.sh` reads it from here.
-    public static let version = "0.14.0"
+    public static let version = "0.15.0"
 
     /// Absolute paths of the Apple tools Build Desk drives. `xcrun` finds `devicectl` and `simctl`
     /// inside the selected Xcode.

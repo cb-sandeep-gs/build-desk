@@ -223,40 +223,58 @@ func perform(_ command: CLI.Command, _ arguments: Arguments) async throws {
     }
 }
 
-/// `release status <project>` and `release plan <project> …`: the project's release workflow.
+/// `release status|store|plan <project> …`: the project's release workflow.
 func release(_ arguments: Arguments) async throws {
-    guard arguments.positionals.count == 2 else { throw UsageError(message: "Give status or plan, then one project path.") }
+    guard arguments.positionals.count == 2 else {
+        throw UsageError(message: "Give status, store or plan, then one project path.")
+    }
     let container = try ProjectContainer(url: URL(fileURLWithPath: arguments.positionals[1]))
     guard let provider = try ProjectReader().quickSnapshot(of: container).releaseProvider else {
         throw UsageError(message: "This project's \(ProjectConfig.fileName) has no release section, so it has no release commands.")
     }
     switch arguments.positionals[0] {
-    case "status":
-        let status = try await ReleaseClient().status(provider)
-        if arguments.has(CLI.Flag.json) { return try Output.json(status) }
-        for app in status.apps {
-            print("\(app.name) \(app.version)")
-            Output.table(
-                [["  store", app.store?.version ?? "none", app.commitsSinceStore.map { "\($0) commits since" } ?? ""]]
-                    + app.tracks.map { ["  \($0.name)", $0.latest?.version ?? "none", $0.commitsSince.map { "\($0) commits since" } ?? ""] }
-            )
-        }
-    case "plan":
-        guard let kind = ReleaseAction.Kind(rawValue: try arguments.required(CLI.Option.action)) else {
-            throw UsageError(message: "\(CLI.Option.action) is testflight or store.")
-        }
-        let action = ReleaseAction(
-            kind: kind, app: try arguments.required(CLI.Option.app), track: arguments.options[CLI.Option.track],
-            branch: arguments.options[CLI.Option.branch], from: arguments.options[CLI.Option.from]
-        )
-        let plan = try await ReleaseClient().plan(action, provider)
-        print(plan.title)
-        plan.steps.enumerated().forEach { print("  \($0.offset + 1). \($0.element)") }
-        (plan.warnings ?? []).forEach { print("  warning: \($0)") }
-        if let notes = plan.notes { print("\nNotes:\n\(notes)") }
-    default:
-        throw UsageError(message: "release takes status or plan.")
+    case "status": try await releaseStatus(provider, arguments)
+    case "store": try await releaseStore(provider, arguments)
+    case "plan": try await releasePlan(provider, arguments)
+    default: throw UsageError(message: "release takes status, store or plan.")
     }
+}
+
+func releaseStatus(_ provider: ReleaseProvider, _ arguments: Arguments) async throws {
+    let status = try await ReleaseClient().status(provider)
+    if arguments.has(CLI.Flag.json) { return try Output.json(status) }
+    for app in status.apps {
+        print("\(app.name) \(app.version)")
+        let store = ["  store", app.store?.version ?? "none", app.commitsSinceStore.map { "\($0) commits since" } ?? ""]
+        let tracks = app.tracks.map { ["  \($0.name)", $0.latest?.version ?? "none", $0.commitsSince.map { "\($0) commits since" } ?? ""] }
+        Output.table([store] + tracks)
+    }
+}
+
+func releaseStore(_ provider: ReleaseProvider, _ arguments: Arguments) async throws {
+    let store = try await ReleaseClient().store(provider)
+    if arguments.has(CLI.Flag.json) { return try Output.json(store) }
+    guard store.connected else { return print("Not connected. \(store.hint ?? "")") }
+    for app in store.apps {
+        print(app.id)
+        Output.table(app.builds.map { ["  \($0.id)", $0.cloud ?? "", $0.testing ?? "", ($0.groups ?? []).joined(separator: ", ")] })
+        (app.alerts ?? []).forEach { print("  \($0.severity): \($0.message)") }
+    }
+}
+
+func releasePlan(_ provider: ReleaseProvider, _ arguments: Arguments) async throws {
+    guard let kind = ReleaseAction.Kind(rawValue: try arguments.required(CLI.Option.action)) else {
+        throw UsageError(message: "\(CLI.Option.action) is testflight or store.")
+    }
+    let action = ReleaseAction(
+        kind: kind, app: try arguments.required(CLI.Option.app), track: arguments.options[CLI.Option.track],
+        branch: arguments.options[CLI.Option.branch], from: arguments.options[CLI.Option.from]
+    )
+    let plan = try await ReleaseClient().plan(action, provider)
+    print(plan.title)
+    plan.steps.enumerated().forEach { print("  \($0.offset + 1). \($0.element)") }
+    (plan.warnings ?? []).forEach { print("  warning: \($0)") }
+    if let notes = plan.notes { print("\nNotes:\n\(notes)") }
 }
 
 /// The commands that fetch something from a device.

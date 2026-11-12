@@ -8,6 +8,8 @@ public protocol ReleaseProviding: Sendable {
     func plan(_ action: ReleaseAction, _ provider: ReleaseProvider) async throws -> ReleasePlan
     /// Does what the plan described. Call only after the person has confirmed that plan.
     func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult
+    /// Live state from the store. Read-only; needs the network.
+    func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus
 }
 
 /// The commands a project supplies, and the folder they are run from.
@@ -66,6 +68,13 @@ public struct ReleaseClient: ReleaseProviding {
             if let commit = plan.commit { arguments += [Flag.expect, commit] }
             return try await answer(of: command, arguments, provider, name: "run")
         }
+    }
+
+    public func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus {
+        guard let command = provider.commands.store else { throw BuildDeskError.releaseCommandMissing(name: "store") }
+        let status: ReleaseStoreStatus = try await answer(of: command, [], provider, name: "store")
+        try Self.checkVersion(status.contract)
+        return status
     }
 
     static func arguments(for action: ReleaseAction, notesFile: URL?) -> [String] {

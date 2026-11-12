@@ -115,7 +115,40 @@ for a new plan.
 {"contract": 1, "result": "ShopInternal-4.2.4", "done": ["Created tag ShopInternal-4.2.4", "Pushed the tag"]}
 ```
 
+## `store`
+
+Optional. Called after `status`, with no extra arguments. It may use the network. It is read-only.
+
+```json
+{
+  "contract": 1,
+  "connected": true,
+  "hint": null,
+  "apps": [
+    {
+      "id": "shop",
+      "builds": [
+        {"id": "ShopInternal-4.2.3", "number": "812", "cloud": "succeeded", "cloudDetail": "Release workflow",
+         "testing": "In testing", "groups": ["Staff"]}
+      ],
+      "storeVersions": [{"version": "4.2", "state": "Prepare for submission"}],
+      "alerts": [{"severity": "warning", "message": "Build 800 is in a partner group"}]
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `connected` | False when the provider has no access to the store on this Mac. Then `hint` says what to do, and `apps` is empty. This is an answer, not an error. |
+| `builds[].id` | The same id as the build in `status`, which is how the two are matched. |
+| `builds[].cloud` | `running`, `succeeded` or `failed`: how the build's cloud run went. |
+| `builds[].testing` | The testing state in words; null until the build has reached testers. |
+| `builds[].groups` | The tester groups that have the build. |
+| `storeVersions` | Versions on the store's side with their state, newest first. |
+| `alerts` | Things that need attention; `severity` is `error` or `warning`. |
+
 ## Later versions
 
-`checks` (go or no-go gates) and `store` (live state from the store) are reserved names in the settings file; their
-shapes are added to this document when Build Desk reads them.
+`checks` (go or no-go gates) is a reserved name in the settings file; its shape is added to this document when
+Build Desk reads it.

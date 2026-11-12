@@ -23,6 +23,8 @@ public final class ReleaseModel {
     public private(set) var state: LoadState<ReleaseStatus> = .idle
     /// True while a refresh is running over a status that is already shown.
     public private(set) var isRefreshing = false
+    /// Live state from the store. It arrives after the status, because it needs the network.
+    public private(set) var store: LoadState<ReleaseStoreStatus> = .idle
     public var selectedAppID: String?
     /// The build whose details are open; nil when none is.
     public var selectedBuildID: String?
@@ -66,6 +68,42 @@ public final class ReleaseModel {
             if !fresh.builds.contains(where: { $0.id == selectedBuildID }) { selectedBuildID = nil }
         } catch {
             state = .failed(userMessage(for: error))
+            return
+        }
+        await refreshStore()
+    }
+
+    /// True when the project has a command for live store state.
+    public var hasStore: Bool { provider.commands.store != nil }
+
+    /// Reads the live store state. The status stays usable while this is in flight or if it fails.
+    private func refreshStore() async {
+        guard hasStore else { return }
+        if store.value == nil { store = .loading }
+        do {
+            store = .loaded(try await client.store(provider))
+        } catch {
+            store = .failed(userMessage(for: error))
+        }
+    }
+
+    /// What the store knows about a build; nil while not loaded, not connected or not listed there.
+    public func storeBuild(for build: ReleaseBuild) -> ReleaseStoreBuild? {
+        store.value?.apps.first { $0.id == build.app }?.builds.first { $0.id == build.id }
+    }
+
+    /// The selected app as the store sees it.
+    public var storeApp: ReleaseStoreApp? {
+        store.value?.apps.first { $0.id == selectedAppID }
+    }
+
+    /// One line on the store connection when it is not simply working; nil when there is nothing to say.
+    public var storeNote: String? {
+        switch store {
+        case .idle: nil
+        case .loading: "Reading the live store state…"
+        case .failed(let message): "Couldn't read the store: \(message)"
+        case .loaded(let status): status.connected ? nil : "Store not connected. \(status.hint ?? "")"
         }
     }
 
