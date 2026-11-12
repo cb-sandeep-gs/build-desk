@@ -39,6 +39,8 @@ and docs.
   out of code, tests, fixtures, docs and commit messages; use made-up values in fixtures.
 - **Destructive actions need the user's click:** uninstalling an app, deleting a build folder or clearing logs
   is never automatic. Never uninstall a real app from a user's device to test; use the error path or a fake.
+- **What comes off a device is the user's data.** Screenshots, app data and crash logs fetched for a check go to
+  the scratch folder and are deleted when the check is done; they never go in the repository.
 - **Git is read-only.** Build Desk reads the branch and commit of a checkout and never changes it.
 
 ## Performance and memory

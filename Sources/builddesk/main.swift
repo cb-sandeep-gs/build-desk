@@ -110,6 +110,34 @@ func console(_ arguments: Arguments) async throws {
     }
 }
 
+func screenshot(_ arguments: Arguments) async throws {
+    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    let file = URL(fileURLWithPath: try arguments.required(CLI.Option.output))
+    try await DeviceToolsService().screenshot(of: device, to: file)
+    print("Saved \(file.path)")
+}
+
+func appData(_ arguments: Arguments) async throws {
+    let bundleIdentifier = try arguments.onlyPositional("bundle identifier")
+    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    let folder = URL(fileURLWithPath: try arguments.required(CLI.Option.output))
+    try await DeviceToolsService().copyAppData(bundleIdentifier: bundleIdentifier, from: device, to: folder)
+    print("Copied the data of \(bundleIdentifier) to \(folder.path)")
+}
+
+func crashes(_ arguments: Arguments) async throws {
+    let process = try arguments.onlyPositional("process name")
+    let device = try await DeviceDiscovery().device(matching: arguments.required(CLI.Option.device))
+    let tools = DeviceToolsService()
+    let logs = try await tools.crashLogs(forProcess: process, on: device)
+    guard !logs.isEmpty else { return print("No crash logs for \(process) on \(device.name).") }
+    Output.table(logs.map { [$0.name, $0.date?.formatted(date: .abbreviated, time: .shortened) ?? ""] })
+    if let output = arguments.options[CLI.Option.output] {
+        try await tools.copy(logs, from: device, to: URL(fileURLWithPath: output))
+        print("Copied \(logs.count) crash logs to \(output)")
+    }
+}
+
 /// Raised when tests ran and some failed, so the tool can exit with its own code.
 struct TestsFailed: Error {}
 
@@ -190,6 +218,17 @@ func perform(_ command: CLI.Command, _ arguments: Arguments) async throws {
     case .uninstall: try await uninstall(arguments)
     case .console: try await console(arguments)
     case .test: try await test(arguments)
+    case .screenshot, .appdata, .crashes: try await performDeviceTool(command, arguments)
+    }
+}
+
+/// The commands that fetch something from a device.
+func performDeviceTool(_ command: CLI.Command, _ arguments: Arguments) async throws {
+    switch command {
+    case .screenshot: try await screenshot(arguments)
+    case .appdata: try await appData(arguments)
+    case .crashes: try await crashes(arguments)
+    default: break
     }
 }
 

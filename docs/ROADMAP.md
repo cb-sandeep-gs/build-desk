@@ -1,13 +1,13 @@
 # Build Desk — roadmap
 
 What is left to finish, what to build next, and where the tool could go. Written 2026-11-13, after phases BD-0 to
-BD-5. BD-6 to BD-9 and part of BD-11 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
+BD-5. BD-6 to BD-10 and part of BD-11 have been built since and are described in PLAN.md. What is already built is described in [PLAN.md](PLAN.md).
 
 ## Where it stands
 
 Build Desk builds any scheme of an Xcode project, installs it on real devices and simulators and launches it, with
 Xcode closed. It has a main window, a menu bar item with one-click pins, a command-line tool, a project settings
-file for teams, a release script, run history with a new-warning diff, a build folder panel, launch options per pin, a test runner, a build queue and a daily build. It has 170 tests.
+file for teams, a release script, run history with a new-warning diff, a build folder panel, launch options per pin, a test runner, a build queue, a daily build and device tools (screenshot, app data, crash logs). It has 181 tests.
 
 | Area | State |
 |---|---|
@@ -57,14 +57,14 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 
 | Phase | What it adds | Size | Depends on |
 |---|---|---|---|
-| BD-10 Device tools | Screenshot, crash logs, app data folder, unified logs | L | Research |
+| BD-10 Device tools (rest) | Unified logs in the console | M | Research |
 | BD-11 Distribution (rest) | Check for a newer release and offer to install it; a release workflow on a tagged commit | S | First signed release, and a decision on a dependency |
 
-### BD-10 Device tools
+### BD-10 Device tools (rest)
 
-- Screenshot of the device or simulator, saved or copied.
-- Pull crash logs and the app's data folder.
-- Unified logging in the console. Needs research first (section 4).
+- Unified logging in the console. For a simulator this is within reach (`simctl spawn <device> log stream` with a
+  filter on the app's process). For a real device it needs research first (section 4).
+- Screen recording, which `simctl` offers for simulators.
 
 ### BD-11 Distribution
 

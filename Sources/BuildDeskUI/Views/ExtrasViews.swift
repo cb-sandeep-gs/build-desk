@@ -257,8 +257,8 @@ struct ExtraDevicesMenu: View {
     }
 }
 
-/// Things to do with the app once it is on the device. They need to know which app that is, so
-/// they wait for one install from Build Desk.
+/// Things to do with the device and with the app once it is on it. The app's own items need to
+/// know which app that is, so they wait for one install from Build Desk.
 struct InstalledAppMenu: View {
     let app: AppModel
     let scheme: Scheme
@@ -267,15 +267,31 @@ struct InstalledAppMenu: View {
     var body: some View {
         Menu {
             Button("Open Console", systemImage: "terminal") { app.openConsoleForSelection() }
+                .disabled(app.lastInstall == nil)
+            Divider()
+            Button("Take Screenshot", systemImage: "camera") {
+                Task { await app.takeScreenshot(in: FolderPicker.desktop) }
+            }
+            .disabled(!app.canUseDeviceTools)
+            Button("Download App Data…", systemImage: "square.and.arrow.down") {
+                guard let folder = FolderPicker.choose("Choose where to save the app's data.") else { return }
+                Task { await app.downloadAppData(to: folder) }
+            }
+            .disabled(!app.canUseDeviceTools || app.lastInstall == nil)
+            Button("Save Crash Logs…", systemImage: "exclamationmark.bubble") {
+                guard let folder = FolderPicker.choose("Choose where to save the crash logs.") else { return }
+                Task { await app.saveCrashLogs(to: folder) }
+            }
+            .disabled(!app.canUseDeviceTools)
+            Divider()
             Button("Uninstall from Device…", systemImage: "trash", role: .destructive) { confirmsUninstall = true }
+                .disabled(app.lastInstall == nil)
         } label: {
             Label("More", systemImage: "ellipsis.circle")
         }
         .fixedSize()
-        .disabled(app.lastInstall == nil || app.run.isRunning)
-        .help(app.lastInstall == nil
-            ? "Available after Build Desk has installed this scheme on the selected device"
-            : "Console and uninstall")
+        .disabled(app.run.isRunning)
+        .help("Console, screenshot, app data, crash logs and uninstall")
         .accessibilityIdentifier(AccessibilityID.moreMenu)
         // Removing an app also removes its data, so it is never done on one click.
         .confirmationDialog(
@@ -286,6 +302,45 @@ struct InstalledAppMenu: View {
         } message: {
             Text("The app and its data on the device are deleted. This can't be undone.")
         }
+    }
+}
+
+/// What the last device tool did, with a way to the file it saved.
+struct DeviceToolResultView: View {
+    let app: AppModel
+
+    var body: some View {
+        if app.isUsingDeviceTool {
+            HStack(spacing: Layout.spacingSmall) {
+                ProgressView().controlSize(.small)
+                Text("Working with the device…").font(.callout).foregroundStyle(.secondary)
+            }
+        } else if let message = app.deviceToolMessage {
+            HStack(spacing: Layout.spacingSmall) {
+                Text(message).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                if let url = app.deviceToolResult {
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }.buttonStyle(.link)
+                }
+            }
+        }
+    }
+}
+
+/// Asks the user for a folder to save into.
+@MainActor
+enum FolderPicker {
+    static var desktop: URL {
+        FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first ?? FileManager.default.homeDirectoryForCurrentUser
+    }
+
+    static func choose(_ message: String) -> URL? {
+        let panel = NSOpenPanel()
+        panel.message = message
+        panel.prompt = "Save Here"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        return panel.runModal() == .OK ? panel.url : nil
     }
 }
 

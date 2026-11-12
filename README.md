@@ -8,7 +8,7 @@ must be installed but never needs to be running. Signing uses the Apple account 
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
 window (BD-2), the menu bar item (BD-3), the extras (BD-4), what a team needs to share it (BD-5: project
-settings file, device checks, release script), build insight (BD-6), launch options (BD-7), running tests (BD-8) and a build queue with a daily build (BD-9). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
+settings file, device checks, release script), build insight (BD-6), launch options (BD-7), running tests (BD-8), a build queue with a daily build (BD-9) and device tools (BD-10). What is built is in [docs/PLAN.md](docs/PLAN.md); what comes next
 is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Use the app
@@ -40,6 +40,10 @@ app is and offers the devices it fits.
 **After an install.** Under the scheme name the window shows when it was last installed on the selected device and
 the branch and commit it was built from. The **More** menu opens the app's **console** (what it prints with
 `print` and `NSLog`; unified logging is not included) and can **uninstall** it, after a confirmation.
+
+**Device tools.** Also in **More**: **Take Screenshot** saves a picture of the device's screen to the Desktop;
+**Download App Data** copies the installed app's data folder to a folder you choose; **Save Crash Logs** copies
+the app's newest crash reports. Each one ends with a Show in Finder link.
 
 **Launch options.** Under the buttons, **Launch options** takes command-line arguments, environment variables
 (`NAME=value`, separated by spaces) and a link to open, for example to start the app with a debug flag or on a
@@ -134,6 +138,9 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk install <app-or-ipa> --device <name-or-udid>` | Installs a built `.app` or `.ipa` and launches it. |
 | `builddesk console <bundle-id> --device <name-or-udid>` | Relaunches an installed app and prints what it writes until it exits or you press Ctrl-C. |
 | `builddesk uninstall <bundle-id> --device <name-or-udid>` | Removes an app and its data from the device. |
+| `builddesk screenshot --device <name-or-udid> --output <file.png>` | Saves a picture of the device's screen. |
+| `builddesk appdata <bundle-id> --device <name-or-udid> --output <folder>` | Copies an installed app's data folder. |
+| `builddesk crashes <process-name> --device <name-or-udid>` | Lists the app's crash logs, newest first; `--output <folder>` copies them. |
 | `builddesk test <project> --scheme <name> --device <name-or-udid>` | Runs the scheme's tests and prints the failures. `--only <Bundle[/Class[/test]]>` limits the run. Exits with 2 when tests failed. |
 
 `<project>` is a `.xcodeproj` or `.xcworkspace`. Add `--json` to `schemes`, `targets` and `devices` for

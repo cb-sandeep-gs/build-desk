@@ -39,6 +39,8 @@ public struct AppEnvironment: Sendable {
     public let buildFolders: any BuildFolderManaging
     /// Runs a scheme's tests.
     public let tester: any TestRunning
+    /// Screenshots, app data and crash logs from a device.
+    public let deviceTools: any DeviceToolsProviding
 
     public init(
         reader: any ProjectReading,
@@ -52,7 +54,8 @@ public struct AppEnvironment: Sendable {
         source: any SourceStateReading = InertServices(),
         history: any RunHistoryStoring = MemoryRunHistoryStore(),
         buildFolders: any BuildFolderManaging = InertServices(),
-        tester: any TestRunning = InertServices()
+        tester: any TestRunning = InertServices(),
+        deviceTools: any DeviceToolsProviding = InertServices()
     ) {
         self.reader = reader
         self.discovery = discovery
@@ -66,6 +69,7 @@ public struct AppEnvironment: Sendable {
         self.history = history
         self.buildFolders = buildFolders
         self.tester = tester
+        self.deviceTools = deviceTools
     }
 }
 

@@ -13,6 +13,9 @@ enum CLI {
         case uninstall
         case console
         case test
+        case screenshot
+        case appdata
+        case crashes
     }
 
     enum Option {
@@ -24,8 +27,11 @@ enum CLI {
         static let launchEnvironment = "--launch-env"
         static let launchURL = "--launch-url"
         static let only = "--only"
+        static let output = "--output"
         /// Options that are followed by a value.
-        static let withValue: Set<String> = [scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL, only]
+        static let withValue: Set<String> = [
+            scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL, only, output,
+        ]
     }
 
     enum Flag {
@@ -62,6 +68,9 @@ enum CLI {
       builddesk console <bundle-id> --device <name-or-udid>
       builddesk test <project> --scheme <name> --device <name-or-udid>
                      [--configuration <name>] [--only <Bundle[/Class[/test]]>]
+      builddesk screenshot --device <name-or-udid> --output <file.png>
+      builddesk appdata <bundle-id> --device <name-or-udid> --output <folder>
+      builddesk crashes <process-name> --device <name-or-udid> [--output <folder>]
 
     <project> is a .xcodeproj or .xcworkspace.
       --full          also ask xcodebuild for schemes that have no scheme file (slower)
@@ -74,6 +83,9 @@ enum CLI {
       --launch-args "<args>"      command-line arguments, separated by spaces
       --launch-env "<N=v N=v>"    environment variables
       --launch-url <link>         a link the app opens at launch
+
+    crashes lists the crash logs of an app (named after its process, such as "Sample"), newest
+    first, and copies them to the folder given with --output.
 
     install puts a built .app or .ipa on a device. console launches an installed app and
     prints what it writes to standard output and error until it exits (Ctrl-C to stop).

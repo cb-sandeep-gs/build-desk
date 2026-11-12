@@ -83,6 +83,25 @@ public enum AppleTools {
         xcrun(["devicectl", "device", "uninstall", "app", "--device", udid, bundleIdentifier])
     }
 
+    public static func screenshotOfDevice(udid: String, to file: URL) -> ToolCommand {
+        xcrun(["devicectl", "device", "capture", "screenshot", "--device", udid, "--destination", file.path])
+    }
+
+    /// Lists the files of a file domain of the device (crash logs, for example) as JSON.
+    public static func listFilesOnDevice(udid: String, domain: String, jsonOutput: URL) -> ToolCommand {
+        xcrun(["devicectl", "device", "info", "files", "--device", udid, "--domain-type", domain, "--json-output", jsonOutput.path])
+    }
+
+    /// Copies a file or folder from a file domain of the device to this Mac. An app's data needs
+    /// the app's bundle identifier; crash logs need none.
+    public static func copyFromDevice(
+        udid: String, domain: String, identifier: String?, source: String, to destination: URL
+    ) -> ToolCommand {
+        var arguments = ["devicectl", "device", "copy", "from", "--device", udid, "--domain-type", domain]
+        if let identifier { arguments += ["--domain-identifier", identifier] }
+        return xcrun(arguments + ["--source", source, "--destination", destination.path])
+    }
+
     // MARK: - simctl (simulators)
 
     public static func listSimulators() -> ToolCommand {
@@ -122,6 +141,15 @@ public enum AppleTools {
 
     public static func uninstallFromSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
         xcrun(["simctl", "uninstall", udid, bundleIdentifier])
+    }
+
+    public static func screenshotOfSimulator(udid: String, to file: URL) -> ToolCommand {
+        xcrun(["simctl", "io", udid, "screenshot", file.path])
+    }
+
+    /// Prints where an installed app keeps its data on this Mac.
+    public static func appDataFolderOnSimulator(udid: String, bundleIdentifier: String) -> ToolCommand {
+        xcrun(["simctl", "get_app_container", udid, bundleIdentifier, "data"])
     }
 
     // MARK: - Other tools

@@ -180,6 +180,7 @@ struct SchemeDetailView: View {
             if let message = app.uninstallMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)
             }
+            DeviceToolResultView(app: app)
             // A disabled button alone does not say why; this line does.
             if let blocker = app.runBlocker, !app.run.isRunning {
                 Text(blocker).font(.callout).foregroundStyle(.secondary)

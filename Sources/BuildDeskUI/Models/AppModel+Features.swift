@@ -78,6 +78,87 @@ extension AppModel {
     }
 }
 
+// MARK: - Device tools
+
+extension AppModel {
+    /// Crash reports copied at once: the newest ones are what a person is looking for.
+    public static let crashLogLimit = 20
+
+    /// True when a device tool can be used: a ready device, and nothing else going on.
+    public var canUseDeviceTools: Bool {
+        selectedDevice?.isReady == true && !isUsingDeviceTool && !run.isRunning && !tests.isRunning
+    }
+
+    /// The name the app runs under on the device, which crash reports are named after.
+    var processNameForSelection: String? {
+        guard let scheme = project?.selectedScheme, let product = (scheme.runnable ?? scheme.buildTargets.first)?.productName else {
+            return nil
+        }
+        return URL(fileURLWithPath: product).deletingPathExtension().lastPathComponent
+    }
+
+    /// Saves a picture of the selected device's screen in `folder`.
+    public func takeScreenshot(in folder: URL) async {
+        guard canUseDeviceTools, let device = selectedDevice else { return }
+        let file = folder.appendingPathComponent("\(device.name) \(Self.fileStamp()).png")
+        await useDeviceTool(saving: file, success: "Screenshot of \(device.name) saved.") {
+            try await self.environment.deviceTools.screenshot(of: device, to: file)
+        }
+    }
+
+    /// Copies the data of the app last installed for the selection into a new folder in `folder`.
+    public func downloadAppData(to folder: URL) async {
+        guard canUseDeviceTools, let device = selectedDevice, let record = lastInstall, let scheme = project?.selectedSchemeName
+        else { return }
+        let destination = folder.appendingPathComponent("\(scheme) data \(Self.fileStamp())")
+        await useDeviceTool(saving: destination, success: "App data of \(scheme) copied from \(device.name).") {
+            try await self.environment.deviceTools.copyAppData(bundleIdentifier: record.bundleIdentifier, from: device, to: destination)
+        }
+    }
+
+    /// Copies the newest crash reports of the selected scheme's app into a new folder in `folder`.
+    public func saveCrashLogs(to folder: URL) async {
+        guard canUseDeviceTools, let device = selectedDevice, let process = processNameForSelection else { return }
+        let destination = folder.appendingPathComponent("\(process) crash logs \(Self.fileStamp())")
+        isUsingDeviceTool = true
+        defer { isUsingDeviceTool = false }
+        do {
+            let logs = Array(try await environment.deviceTools.crashLogs(forProcess: process, on: device).prefix(Self.crashLogLimit))
+            guard !logs.isEmpty else {
+                deviceToolResult = nil
+                return deviceToolMessage = "No crash logs for \(process) on \(device.name)."
+            }
+            try await environment.deviceTools.copy(logs, from: device, to: destination)
+            deviceToolResult = destination
+            deviceToolMessage = "\(logs.count) crash log\(logs.count == 1 ? "" : "s") of \(process) saved."
+        } catch {
+            deviceToolResult = nil
+            deviceToolMessage = userMessage(for: error)
+        }
+    }
+
+    private func useDeviceTool(saving url: URL, success: String, _ work: () async throws -> Void) async {
+        isUsingDeviceTool = true
+        defer { isUsingDeviceTool = false }
+        do {
+            try await work()
+            deviceToolResult = url
+            deviceToolMessage = success
+        } catch {
+            deviceToolResult = nil
+            deviceToolMessage = userMessage(for: error)
+        }
+    }
+
+    /// "2026-01-01 at 10.15.00": sorts by name in time order and is valid in a file name.
+    static func fileStamp(_ date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+        return formatter.string(from: date)
+    }
+}
+
 // MARK: - Tests
 
 extension AppModel {

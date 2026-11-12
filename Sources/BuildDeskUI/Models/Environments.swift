@@ -22,7 +22,8 @@ extension AppEnvironment {
             // Without a support folder, history still works for the session.
             history: FileRunHistoryStore.defaultDirectory.map { FileRunHistoryStore(directory: $0) } ?? MemoryRunHistoryStore(),
             buildFolders: BuildFolderService(),
-            tester: TestRunner()
+            tester: TestRunner(),
+            deviceTools: DeviceToolsService()
         )
     }
 }

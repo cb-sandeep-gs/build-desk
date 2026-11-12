@@ -38,6 +38,11 @@ public final class AppModel {
     public internal(set) var uninstallMessage: String?
     /// The selected device, when it is known to be waiting for its passcode.
     public internal(set) var lockedDeviceID: String?
+    /// What the last device tool did (a saved screenshot, copied data), or why it failed.
+    public internal(set) var deviceToolMessage: String?
+    /// The file or folder the last device tool saved, for Show in Finder.
+    public internal(set) var deviceToolResult: URL?
+    public internal(set) var isUsingDeviceTool = false
     /// Launch options per project and scheme, as typed.
     public internal(set) var launchTexts: [String: LaunchTexts] {
         didSet { store.launchTexts = launchTexts }

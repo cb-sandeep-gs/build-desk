@@ -238,6 +238,35 @@ struct FakeTester: TestRunning {
     }
 }
 
+/// Records what was asked of the device tools.
+struct FakeDeviceTools: DeviceToolsProviding {
+    let calls = Locked<[String]>([])
+    let logs = Locked<[CrashLog]>([])
+    let failure = Locked<BuildDeskError?>(nil)
+
+    private func record(_ call: String) throws {
+        if let failure = failure.value { throw failure }
+        calls.value += [call]
+    }
+
+    func screenshot(of device: Device, to file: URL) async throws {
+        try record("screenshot of \(device.name) to \(file.lastPathComponent)")
+    }
+
+    func copyAppData(bundleIdentifier: String, from device: Device, to folder: URL) async throws {
+        try record("data of \(bundleIdentifier) from \(device.name) to \(folder.lastPathComponent)")
+    }
+
+    func crashLogs(forProcess processName: String, on device: Device) async throws -> [CrashLog] {
+        try record("crash logs of \(processName) on \(device.name)")
+        return logs.value
+    }
+
+    func copy(_ logs: [CrashLog], from device: Device, to folder: URL) async throws {
+        try record("copy \(logs.count) logs from \(device.name) to \(folder.lastPathComponent)")
+    }
+}
+
 /// A build folder on disk that tests can inspect and fail.
 struct FakeBuildFolders: BuildFolderManaging {
     let bytes = Locked<Int64?>(4_500_000_000)

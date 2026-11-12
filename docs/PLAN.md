@@ -38,6 +38,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-10 Device tools | Screenshot, app data folder and crash logs from a device or simulator. Unified logs are still open. | Done 2026-11-13 |
 | BD-11 Distribution (part) | App icon and checks on every push. Auto-update is still open. | Done 2026-11-13 |
 | BD-9 Build queue | Run every pin one after another with one notification; build the pins once a day. | Done 2026-11-13 |
 | BD-8 Run tests | Run a scheme's tests, or one class or test, with results per test and a re-run of the failed ones. | Done 2026-11-13 |
@@ -107,6 +108,23 @@ now stops whatever it was running, so no build or console session is left behind
 
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
+
+## What BD-10 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Screenshot | `DeviceToolsService.screenshot` | More ▸ Take Screenshot saves a picture of the selected device's screen to the Desktop, named after the device and the time. Needs only a ready device, not an install. |
+| App data | `DeviceToolsService.copyAppData` | More ▸ Download App Data copies the installed app's data folder (Documents, Library, tmp) into a new folder you choose. On a device this is one `devicectl` copy; on a simulator the files are already on the Mac. |
+| Crash logs | `DeviceToolsService.crashLogs`, `CrashLog` | More ▸ Save Crash Logs copies the newest 20 crash reports of the scheme's app, matched by the name the app runs under. It says so plainly when there are none. |
+
+Each tool reports what it saved with a Show in Finder link, or why it failed. The command line has
+`builddesk screenshot`, `appdata` and `crashes`.
+
+Tried on a wired iPhone with the real tools: a screenshot, the full data folder of an installed app (46 MB) and
+a crash log listing and copy. The app had no crash reports of its own, so the copy was checked on a system
+report. Everything fetched was deleted afterwards.
+
+Still open in BD-10: unified logging (`os_log`, `Logger`) in the console (see ROADMAP.md).
 
 ## What BD-11 built so far
 

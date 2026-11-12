@@ -90,7 +90,8 @@ public struct InstallRecord: Codable, Equatable, Sendable {
 
 /// Services that do nothing. The default for the parts of the environment a test or the demo
 /// does not care about.
-public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateReading, BuildFolderManaging, TestRunning {
+public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateReading, BuildFolderManaging, TestRunning,
+    DeviceToolsProviding {
     public init() {}
 
     public func read(_ url: URL) async throws -> AppArtifact {
@@ -112,4 +113,12 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
     public func run(_ request: TestRequest) -> AsyncThrowingStream<TestEvent, Error> {
         AsyncThrowingStream { $0.finish() }
     }
+
+    public func screenshot(of device: Device, to file: URL) async throws {}
+
+    public func copyAppData(bundleIdentifier: String, from device: Device, to folder: URL) async throws {}
+
+    public func crashLogs(forProcess processName: String, on device: Device) async throws -> [CrashLog] { [] }
+
+    public func copy(_ logs: [CrashLog], from device: Device, to folder: URL) async throws {}
 }
