@@ -38,8 +38,12 @@ struct FakeReader: ProjectReading {
 
 struct FakeDiscovery: DeviceDiscovering {
     let result = Locked<Result<[Device], BuildDeskError>>(.success(Sample.devices))
+    /// Identifiers of devices that report a locked screen.
+    let lockedIDs = Locked<Set<String>>([])
 
     func devices() async throws -> [Device] { try result.value.get() }
+
+    func isLocked(_ device: Device) async -> Bool? { lockedIDs.value.contains(device.id) }
 }
 
 /// Plays a scripted run. With `hangs`, it stays in the build step until the consumer stops it.
@@ -78,7 +82,7 @@ enum Sample {
     )
     static let offlinePhone = Device(
         id: "OFFLINE", name: "Old iPhone", model: "iPhone 16", platform: "iOS", osVersion: "26.1",
-        kind: .physical, connection: .none, isReady: false, isBooted: false
+        kind: .physical, connection: .none, isReady: false, isBooted: false, issue: .notConnected
     )
     static let simulator = Device(
         id: "SIM", name: "iPhone 17 Pro", model: "iPhone 17 Pro", platform: "iOS", osVersion: "27.2",
@@ -103,7 +107,9 @@ enum Sample {
 
     static func container() throws -> ProjectContainer { try ProjectContainer(url: projectURL) }
 
-    static func snapshot(of container: ProjectContainer, extraSchemes: [String] = []) -> ProjectSnapshot {
+    static func snapshot(
+        of container: ProjectContainer, extraSchemes: [String] = [], config: ProjectConfig = ProjectConfig(), configProblem: String? = nil
+    ) -> ProjectSnapshot {
         let app = SchemeTarget(name: "Sample", productName: "Sample.app")
         let widget = SchemeTarget(name: "SampleWidget", productName: "SampleWidget.appex")
         let watch = SchemeTarget(name: "SampleWatch", productName: "SampleWatch.app")
@@ -123,7 +129,9 @@ enum Sample {
                 ProjectTarget(name: "SampleKit", kind: .framework, platform: .iOS),
             ],
             configurations: ["Release", "Debug", "Staging"],
-            defaultConfiguration: "Release"
+            defaultConfiguration: "Release",
+            config: config,
+            configProblem: configProblem
         )
     }
 

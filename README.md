@@ -7,7 +7,8 @@ Build Desk drives the command-line tools that ship inside Xcode (`xcodebuild`, `
 must be installed but never needs to be running. Signing uses the Apple account already saved in Xcode.
 
 **Status:** all planned phases are built: the core library and `builddesk` command-line tool (BD-1), the main
-window (BD-2), the menu bar item (BD-3) and the extras (BD-4). See [docs/PLAN.md](docs/PLAN.md).
+window (BD-2), the menu bar item (BD-3), the extras (BD-4) and what a team needs to share it (BD-5: project
+settings file, device checks, release script). See [docs/PLAN.md](docs/PLAN.md).
 
 ## Use the app
 
@@ -48,6 +49,50 @@ macOS asks for permission the first time.
 
 The app is ad-hoc signed for local use. The first time you open a copy built on another Mac, macOS asks you to
 confirm it in System Settings.
+
+**When a device can't be used**, the window says which of these it is and what to do: not connected, not
+trusted by this Mac, Developer Mode off. A locked device is flagged too; the app can be installed on it but not
+opened until it is unlocked.
+
+## Project settings for a team
+
+Put a `.builddesk.json` file beside the Xcode project, or anywhere above it up to the repository root, and check
+it in. Everyone who opens the project in Build Desk then gets the same setup. Every key is optional.
+
+```json
+{
+  "favoriteSchemes": ["App", "App Staging"],
+  "hiddenSchemes": ["*Tests", "Pods-*"],
+  "defaultScheme": "App",
+  "defaultConfiguration": "Debug"
+}
+```
+
+| Key | Type | Meaning |
+|---|---|---|
+| `favoriteSchemes` | list of names | Listed first, in this order, in a Favorites group. |
+| `hiddenSchemes` | list of names | Left out of the list. A name must match in full; `*` stands for any run of characters. A "Show hidden" box in the sidebar brings them back. |
+| `defaultScheme` | name | Selected the first time a person opens the project. After that their own last choice is used. |
+| `defaultConfiguration` | name | The same, for the build configuration. |
+
+A file that can't be read, or that has a key Build Desk doesn't know, never stops the project from opening: the
+sidebar shows what is wrong. The format is described in [docs/builddesk.schema.json](docs/builddesk.schema.json).
+
+## Share the app with other Macs
+
+macOS only opens a downloaded app without complaint when it is signed with a Developer ID and notarized by Apple.
+
+```bash
+./Scripts/release.sh
+```
+
+This builds, signs, notarizes and zips the app into `dist/BuildDesk-<version>.zip`, and prints the command that
+publishes it as a GitHub release. It needs one-time setup on the Mac that makes releases; the steps are at the top
+of [Scripts/release.sh](Scripts/release.sh). The script never asks for or stores a password.
+
+Until a Developer ID is set up, `./Scripts/release.sh --adhoc` makes a zip that teammates can still use by
+clearing its quarantine flag once (the script prints the command), or they can build from source with
+`./Scripts/build-app.sh`.
 
 ## Use the command-line tool
 

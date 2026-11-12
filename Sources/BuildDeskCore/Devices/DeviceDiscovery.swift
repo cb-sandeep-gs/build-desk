@@ -30,6 +30,17 @@ public struct DeviceDiscovery: Sendable {
         return match
     }
 
+    /// Whether a real device is waiting for its passcode. Nil when it cannot be told (a simulator,
+    /// a device that is not reachable, an older Xcode); callers treat that as "no known problem".
+    public func isLocked(_ device: Device) async -> Bool? {
+        guard device.kind == .physical, device.isReady else { return nil }
+        let jsonURL = FileManager.default.temporaryDirectory.appendingPathComponent("builddesk-lock-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: jsonURL) }
+        guard let result = try? await toolRunner.run(AppleTools.lockState(udid: device.id, jsonOutput: jsonURL)), result.succeeded,
+              let data = try? Data(contentsOf: jsonURL) else { return nil }
+        return LockStateParser.isLocked(data)
+    }
+
     private func physicalDevices() async throws -> [Device] {
         // devicectl writes JSON only to a file; its standard output is a table for people.
         let jsonURL = FileManager.default.temporaryDirectory.appendingPathComponent("builddesk-devices-\(UUID().uuidString).json")

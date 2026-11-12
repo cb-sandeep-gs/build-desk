@@ -310,7 +310,7 @@ final class AppModelTests: XCTestCase {
         XCTAssertNil(app.runBlocker)
 
         app.devices.selectedDeviceID = Sample.offlinePhone.id
-        XCTAssertEqual(app.runBlocker, "Old iPhone is not connected. Connect and unlock it.")
+        XCTAssertEqual(app.runBlocker, "Old iPhone is not connected. Connect it with a cable and unlock it.")
     }
 
     func testRunUsesTheSelectionAndRemembersTheBuildSize() async {

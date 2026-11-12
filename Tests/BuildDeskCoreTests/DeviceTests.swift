@@ -31,9 +31,11 @@ final class DeviceParserTests: XCTestCase {
     func testSimulatorListSkipsUnavailableRuntimes() throws {
         let simulators = try SimctlParser.parse(Data(Fixtures.simulatorList.utf8)).sorted { $0.name < $1.name }
 
-        XCTAssertEqual(simulators.map(\.name), ["iPad Pro 11-inch", "iPhone 17 Pro"])
-        XCTAssertEqual(simulators.map(\.isBooted), [true, false])
-        XCTAssertEqual(simulators[1], Sample.simulator)
+        XCTAssertEqual(simulators.map(\.name), ["Model Runtime Phone", "iPad Pro 11-inch", "iPhone 17 Pro"])
+        XCTAssertEqual(simulators.map(\.isBooted), [false, true, false])
+        XCTAssertEqual(simulators[2], Sample.simulator)
+        // A runtime made for one device model still reads as a plain version.
+        XCTAssertEqual(simulators[0].osVersion, "27.2")
     }
 
     func testUnexpectedOutputIsReportedAsSuch() {
@@ -69,7 +71,8 @@ final class DeviceDiscoveryTests: XCTestCase {
             "Test iPad", "Test iPhone",   // real and reachable
             "iPad Pro 11-inch",           // booted simulator
             "Old iPhone",                 // real but not connected
-            "iPhone 17 Pro",              // simulator that is shut down
+            "iPhone 17 Pro",              // simulators that are shut down
+            "Model Runtime Phone",
         ])
     }
 
@@ -78,7 +81,7 @@ final class DeviceDiscoveryTests: XCTestCase {
         XCTAssertEqual(withoutSimulators.map(\.kind), [.physical, .physical, .physical])
 
         let withoutDevices = try await DeviceDiscovery(toolRunner: runner(devicectlFails: true)).devices()
-        XCTAssertEqual(withoutDevices.map(\.kind), [.simulator, .simulator])
+        XCTAssertEqual(withoutDevices.map(\.kind), [.simulator, .simulator, .simulator])
     }
 
     func testBothToolsFailingIsAnError() async {

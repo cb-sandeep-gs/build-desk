@@ -137,7 +137,7 @@ private struct PinRow: View {
                 .frame(width: Layout.iconColumnWidth)
             VStack(alignment: .leading, spacing: 1) {
                 Text(pin.scheme).lineLimit(1).truncationMode(.middle)
-                Text("\(pin.configuration) · \(pin.deviceName)\(isReady ? "" : " — not connected")")
+                Text("\(pin.configuration) · \(pin.deviceName)\(isReady ? "" : " — \((device?.issue ?? .notConnected).title)")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

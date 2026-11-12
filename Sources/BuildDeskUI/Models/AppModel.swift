@@ -33,6 +33,8 @@ public final class AppModel {
     public private(set) var pendingArtifact: AppArtifact?
     /// The result of the last uninstall, or why it failed, until the next one.
     public private(set) var uninstallMessage: String?
+    /// The selected device, when it is known to be waiting for its passcode.
+    public private(set) var lockedDeviceID: String?
 
     private let environment: AppEnvironment
     private let store: PreferenceStore
@@ -130,6 +132,16 @@ public final class AppModel {
     public func refreshEnvironment() async {
         isXcodeOpen = environment.isXcodeOpen()
         await devices.refresh()
+        // Only the device that would be used is asked; each question is one more tool run.
+        guard let device = selectedDevice else { return lockedDeviceID = nil }
+        let isLocked = await environment.discovery.isLocked(device) ?? false
+        lockedDeviceID = isLocked ? device.id : nil
+    }
+
+    /// Something to fix on the selected device that does not stop a run, in words for the user.
+    public var deviceHint: String? {
+        guard let device = selectedDevice, device.id == lockedDeviceID else { return nil }
+        return DeviceIssue.locked.fix(for: device.name)
     }
 
     // MARK: - Running
@@ -139,7 +151,7 @@ public final class AppModel {
         if run.isRunning { return "A build is running." }
         guard project?.selectedScheme != nil else { return "Choose a scheme." }
         guard let device = selectedDevice else { return "Connect a device or choose a simulator." }
-        guard device.isReady else { return "\(device.name) is not connected. Connect and unlock it." }
+        guard device.isReady else { return (device.issue ?? .notConnected).fix(for: device.name) }
         return nil
     }
 
@@ -246,7 +258,8 @@ public final class AppModel {
         await devices.refresh()
         devices.selectedDeviceID = pin.deviceID
         guard let device = selectedDevice, device.id == pin.deviceID, device.isReady else {
-            pinError = "\(pin.deviceName) is not connected. Connect and unlock it."
+            // The pin's device may be unknown to this Mac right now, so use the name the pin kept.
+            pinError = (self.device(for: pin)?.issue ?? .notConnected).fix(for: pin.deviceName)
             return
         }
         runSelected(.buildAndInstall)

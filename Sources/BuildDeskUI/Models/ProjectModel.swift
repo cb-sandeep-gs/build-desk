@@ -2,21 +2,26 @@ import BuildDeskCore
 import Foundation
 import Observation
 
-/// Schemes of one kind, as one section of the scheme list.
+/// One section of the scheme list: the project's favorites, or the schemes of one kind.
 public struct SchemeGroup: Equatable, Identifiable, Sendable {
-    public let kind: SchemeKind
+    public let id: String
+    public let title: String
     public let schemes: [Scheme]
 
-    public var id: SchemeKind { kind }
+    /// The schemes a project's `.builddesk.json` lists first.
+    static func favorites(_ schemes: [Scheme]) -> SchemeGroup {
+        SchemeGroup(id: "favorites", title: "Favorites", schemes: schemes)
+    }
 
-    public var title: String {
-        switch kind {
+    static func kind(_ kind: SchemeKind, _ schemes: [Scheme]) -> SchemeGroup {
+        let title = switch kind {
         case .app: "Apps"
         case .appExtension: "Extensions"
         case .framework: "Frameworks"
         case .tests: "Tests"
         case .other: "Other"
         }
+        return SchemeGroup(id: kind.rawValue, title: title, schemes: schemes)
     }
 }
 
@@ -37,6 +42,8 @@ public final class ProjectModel {
 
     /// Text typed in the filter field of the scheme list.
     public var filter = ""
+    /// Also list the schemes the project's `.builddesk.json` hides.
+    public var showsHiddenSchemes = false
     public var selectedSchemeName: String? {
         didSet { store.setLastScheme(selectedSchemeName, for: container.url) }
     }
@@ -62,12 +69,26 @@ public final class ProjectModel {
 
     /// The scheme list as sections, narrowed by the filter text. Empty sections are left out.
     public var groups: [SchemeGroup] {
+        guard let snapshot else { return [] }
         let query = filter.trimmingCharacters(in: .whitespaces)
-        let schemes = (snapshot?.schemes ?? []).filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
-        return Self.groupOrder.compactMap { kind in
-            let matching = schemes.filter { $0.kind == kind }
-            return matching.isEmpty ? nil : SchemeGroup(kind: kind, schemes: matching)
+        let schemes = snapshot.schemes.filter { scheme in
+            (query.isEmpty || scheme.name.localizedCaseInsensitiveContains(query))
+                && (showsHiddenSchemes || !snapshot.config.hides(scheme.name))
         }
+        // Favorites come first, in the order the project lists them, and are not repeated below.
+        let favorites = snapshot.config.favoriteSchemes.compactMap { name in schemes.first { $0.name == name } }
+        let others = schemes.filter { scheme in !favorites.contains { $0.name == scheme.name } }
+        let byKind = Self.groupOrder.compactMap { kind -> SchemeGroup? in
+            let matching = others.filter { $0.kind == kind }
+            return matching.isEmpty ? nil : .kind(kind, matching)
+        }
+        return (favorites.isEmpty ? [] : [.favorites(favorites)]) + byKind
+    }
+
+    /// How many schemes the project's `.builddesk.json` hides.
+    public var hiddenSchemeCount: Int {
+        guard let snapshot else { return 0 }
+        return snapshot.schemes.filter { snapshot.config.hides($0.name) }.count
     }
 
     /// Reads the project's own files. Fast, but still done off the main thread: a project file can
@@ -105,10 +126,7 @@ public final class ProjectModel {
         if let remembered, snapshot.scheme(named: remembered) != nil {
             if selectedSchemeName != remembered { selectedSchemeName = remembered }
         } else {
-            // Nothing remembered, or it is gone: start on an app, since installing one is what the
-            // window is for; an extension that happens to sort first is not a good starting point.
-            let schemes = snapshot.schemes
-            selectedSchemeName = (schemes.first { $0.kind == .app } ?? schemes.first { $0.isInstallable } ?? schemes.first)?.name
+            selectedSchemeName = Self.startingScheme(snapshot)?.name
         }
         // The first snapshot picks the starting configuration; a reload keeps the user's choice
         // unless the project no longer has it.
@@ -118,10 +136,24 @@ public final class ProjectModel {
         }
     }
 
-    /// The remembered configuration, else Debug (what a development install wants), else the
-    /// project's own default, else whatever comes first.
+    /// Nothing remembered, or it is gone: what the project asks for, else its first favorite, else
+    /// an app, since installing one is what the window is for; an extension that happens to sort
+    /// first is not a good starting point.
+    private static func startingScheme(_ snapshot: ProjectSnapshot) -> Scheme? {
+        let schemes = snapshot.schemes
+        let asked = ([snapshot.config.defaultScheme] + snapshot.config.favoriteSchemes).compactMap { $0 }
+        return asked.lazy.compactMap { snapshot.scheme(named: $0) }.first
+            ?? schemes.first { $0.kind == .app }
+            ?? schemes.first { $0.isInstallable }
+            ?? schemes.first
+    }
+
+    /// The remembered configuration, else the one the project's `.builddesk.json` asks for, else
+    /// Debug (what a development install wants), else Xcode's default, else whatever comes first.
     private static func startingConfiguration(_ snapshot: ProjectSnapshot, remembered: String?) -> String {
-        let candidates = [remembered, BuildDeskConstants.fallbackConfiguration, snapshot.defaultConfiguration]
+        let candidates = [
+            remembered, snapshot.config.defaultConfiguration, BuildDeskConstants.fallbackConfiguration, snapshot.defaultConfiguration,
+        ]
         return candidates.compactMap { $0 }.first { snapshot.configurations.contains($0) }
             ?? snapshot.configurations.first
             ?? BuildDeskConstants.fallbackConfiguration

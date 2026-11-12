@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Build Desk project settings (.builddesk.json)",
+  "description": "Checked in beside an Xcode project, or anywhere above it up to the repository root, so everyone opens the project in Build Desk with the same setup. Every key is optional.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "favoriteSchemes": {
+      "description": "Schemes listed first, in this order, in a group of their own. Names that the project does not have are ignored.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "hiddenSchemes": {
+      "description": "Schemes left out of the list. A name must match in full; * stands for any run of characters, as in \"*Tests\".",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "defaultScheme": {
+      "description": "The scheme selected when a person opens the project for the first time. After that, their own last choice is used.",
+      "type": "string"
+    },
+    "defaultConfiguration": {
+      "description": "The build configuration selected when a person opens the project for the first time. After that, their own last choice is used.",
+      "type": "string"
+    }
+  }
+}

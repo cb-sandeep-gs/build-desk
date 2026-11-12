@@ -170,13 +170,17 @@ struct SchemeDetailView: View {
                             .accessibilityIdentifier(AccessibilityID.installOnlyButton)
                     }
                 }
-                if scheme.isInstallable {
+                Spacer()
+            }
+            // On a row of their own, so the buttons above keep their full titles in a narrow window.
+            if scheme.isInstallable {
+                HStack(spacing: Layout.spacing) {
                     Toggle("Launch after install", isOn: $app.launchesAfterInstall)
                         .disabled(app.run.isRunning)
                         .accessibilityIdentifier(AccessibilityID.launchToggle)
+                    Spacer()
+                    InstalledAppMenu(app: app, scheme: scheme)
                 }
-                Spacer()
-                if scheme.isInstallable { InstalledAppMenu(app: app, scheme: scheme) }
             }
             if let message = app.uninstallMessage {
                 Text(message).font(.callout).foregroundStyle(.secondary)
@@ -184,6 +188,8 @@ struct SchemeDetailView: View {
             // A disabled button alone does not say why; this line does.
             if let blocker = app.runBlocker, !app.run.isRunning {
                 Text(blocker).font(.callout).foregroundStyle(.secondary)
+            } else if let hint = app.deviceHint, !app.run.isRunning {
+                Label(hint, systemImage: "lock.fill").font(.callout).foregroundStyle(.orange)
             } else if !scheme.isInstallable {
                 Text(notInstallableNote(scheme)).font(.callout).foregroundStyle(.secondary)
             }

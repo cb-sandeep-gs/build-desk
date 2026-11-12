@@ -27,6 +27,10 @@ public enum AppleTools {
         xcrun(["devicectl", "list", "devices", "--json-output", jsonOutput.path])
     }
 
+    public static func lockState(udid: String, jsonOutput: URL) -> ToolCommand {
+        xcrun(["devicectl", "device", "info", "lockState", "--device", udid, "--json-output", jsonOutput.path])
+    }
+
     public static func installOnDevice(udid: String, app: URL) -> ToolCommand {
         xcrun(["devicectl", "device", "install", "app", "--device", udid, app.path])
     }

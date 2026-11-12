@@ -13,6 +13,12 @@ public protocol ProjectReading: Sendable {
 /// Finds devices and simulators.
 public protocol DeviceDiscovering: Sendable {
     func devices() async throws -> [Device]
+    /// Whether a real device is waiting for its passcode; nil when it cannot be told.
+    func isLocked(_ device: Device) async -> Bool?
+}
+
+extension DeviceDiscovering {
+    public func isLocked(_ device: Device) async -> Bool? { nil }
 }
 
 /// Runs a build, install and launch, reporting progress as events.

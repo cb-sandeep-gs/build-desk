@@ -58,10 +58,23 @@ struct SchemeListView: View {
     /// Swift package schemes have no scheme file; listing them needs `xcodebuild`, which is slow,
     /// so it is offered instead of done on every open.
     @ViewBuilder private var footer: some View {
-        if project.snapshot != nil, !project.hasAllSchemes {
+        if let snapshot = project.snapshot, !project.hasAllSchemes || project.hiddenSchemeCount > 0 || snapshot.configProblem != nil {
             VStack(alignment: .leading, spacing: Layout.spacingSmall) {
                 Divider()
                 Group {
+                    if let problem = snapshot.configProblem {
+                        Label(problem, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .lineLimit(4)
+                    }
+                    if project.hiddenSchemeCount > 0 {
+                        Toggle("Show \(project.hiddenSchemeCount) hidden", isOn: $project.showsHiddenSchemes)
+                            .toggleStyle(.checkbox)
+                            .help("Schemes this project's \(ProjectConfig.fileName) hides")
+                    }
+                    if project.hasAllSchemes {
+                        EmptyView()
+                    } else
                     if project.isLoadingAllSchemes {
                         HStack(spacing: Layout.spacingSmall) {
                             ProgressView().controlSize(.small)

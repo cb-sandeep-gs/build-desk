@@ -131,7 +131,8 @@ public enum Demo {
                 ProjectTarget(name: "HarborTests", kind: .unitTests, platform: .iOS),
             ],
             configurations: ["Debug", "Staging", "Release"],
-            defaultConfiguration: "Release"
+            defaultConfiguration: "Release",
+            config: ProjectConfig(favoriteSchemes: ["Harbor", "Harbor Staging"], hiddenSchemes: ["*Tests"])
         )
     }
 }

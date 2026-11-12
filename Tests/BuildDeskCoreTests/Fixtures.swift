@@ -114,6 +114,8 @@ enum Fixtures {
       "com.apple.CoreSimulator.SimRuntime.iOS-27-2":[
         {"udid":"11111111-2222-3333-4444-555555555555","name":"iPhone 17 Pro","state":"Shutdown","isAvailable":true},
         {"udid":"11111111-2222-3333-4444-666666666666","name":"iPad Pro 11-inch","state":"Booted","isAvailable":true}],
+      "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4":[
+        {"udid":"11111111-2222-3333-4444-888888888888","name":"Model Runtime Phone","state":"Shutdown","isAvailable":true}],
       "com.apple.CoreSimulator.SimRuntime.tvOS-18-5":[
         {"udid":"11111111-2222-3333-4444-777777777777","name":"Apple TV 4K","state":"Shutdown","isAvailable":false,
          "availabilityError":"runtime profile not found"}]

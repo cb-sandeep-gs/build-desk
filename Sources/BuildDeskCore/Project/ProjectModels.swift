@@ -134,7 +134,10 @@ public struct Scheme: Sendable, Equatable, Codable, Identifiable {
         self.testTargets = testTargets
         self.runnable = runnable
         self.isShared = isShared
-        self.kind = Self.kind(buildTargets: buildTargets, testTargets: testTargets, runnable: runnable)
+        // A scheme named after one of its test targets exists to run those tests, even though it
+        // builds, and can run, the app they are hosted in.
+        let isNamedAfterItsTests = testTargets.contains { $0.name == name }
+        self.kind = isNamedAfterItsTests ? .tests : Self.kind(buildTargets: buildTargets, testTargets: testTargets, runnable: runnable)
     }
 
     /// True when Build Desk can install what this scheme builds: an app, or an extension whose
@@ -172,19 +175,27 @@ public struct ProjectSnapshot: Sendable, Equatable, Codable {
     public let configurations: [String]
     /// The configuration command-line builds use when none is given.
     public let defaultConfiguration: String?
+    /// The project's own Build Desk settings; empty when it has no `.builddesk.json`.
+    public let config: ProjectConfig
+    /// What is wrong with the project's `.builddesk.json`, when something is.
+    public let configProblem: String?
 
     public init(
         container: ProjectContainer,
         schemes: [Scheme],
         targets: [ProjectTarget],
         configurations: [String],
-        defaultConfiguration: String?
+        defaultConfiguration: String?,
+        config: ProjectConfig = ProjectConfig(),
+        configProblem: String? = nil
     ) {
         self.container = container
         self.schemes = schemes
         self.targets = targets
         self.configurations = configurations
         self.defaultConfiguration = defaultConfiguration
+        self.config = config
+        self.configProblem = configProblem
     }
 
     public func scheme(named name: String) -> Scheme? {

@@ -29,7 +29,7 @@ func listDevices(_ arguments: Arguments) async throws {
     Output.table(devices.map { device in
         let state = switch (device.kind, device.isReady, device.isBooted) {
         case (.physical, true, _): "ready (\(device.connection.rawValue))"
-        case (.physical, false, _): "not connected"
+        case (.physical, false, _): device.issue?.title ?? "not ready"
         case (.simulator, _, true): "booted"
         case (.simulator, _, false): "shut down"
         }

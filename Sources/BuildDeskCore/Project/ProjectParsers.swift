@@ -8,9 +8,12 @@ final class XMLElementCollector: NSObject, XMLParserDelegate {
         let attributes: [String: String]
         /// Enclosing element names, outermost first.
         let ancestors: [String]
+        /// The attributes of those enclosing elements, in the same order.
+        let ancestorAttributes: [[String: String]]
     }
 
     private var stack: [String] = []
+    private var attributeStack: [[String: String]] = []
     private var elements: [Element] = []
 
     static func elements(in data: Data) throws -> [Element] {
@@ -30,12 +33,14 @@ final class XMLElementCollector: NSObject, XMLParserDelegate {
         qualifiedName qName: String?,
         attributes attributeDict: [String: String] = [:]
     ) {
-        elements.append(Element(name: elementName, attributes: attributeDict, ancestors: stack))
+        elements.append(Element(name: elementName, attributes: attributeDict, ancestors: stack, ancestorAttributes: attributeStack))
         stack.append(elementName)
+        attributeStack.append(attributeDict)
     }
 
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
         stack.removeLast()
+        attributeStack.removeLast()
     }
 }
 
@@ -150,21 +155,33 @@ extension ProjectFileParser {
 enum WorkspaceFileParser {
     private static let fileReference = "FileRef"
     private static let location = "location"
+    /// A location that starts over from the workspace's folder instead of continuing its group's.
+    private static let containerPrefix = "container"
 
-    /// Returns project URLs listed in `contents.xcworkspacedata`. Locations are resolved against the
-    /// workspace's folder; references nested in workspace groups with their own paths are not followed.
+    /// Returns project URLs listed in `contents.xcworkspacedata`. A reference inside workspace
+    /// groups is resolved through each group's own folder, as Xcode does.
     static func projectURLs(in data: Data, workspaceURL: URL) throws -> [URL] {
         let folder = workspaceURL.deletingLastPathComponent()
         return try XMLElementCollector.elements(in: data)
             .filter { $0.name == fileReference }
-            .compactMap { $0.attributes[location] }
-            .compactMap { location -> URL? in
-                // "group:App.xcodeproj", "container:App.xcodeproj" or "absolute:/path/App.xcodeproj".
-                guard let separator = location.firstIndex(of: ":") else { return nil }
-                let path = String(location[location.index(after: separator)...])
-                let url = path.hasPrefix("/") ? URL(fileURLWithPath: path) : folder.appendingPathComponent(path)
+            .compactMap { element -> URL? in
+                guard let own = element.attributes[location] else { return nil }
+                // Outermost group first, the reference itself last.
+                let url = (element.ancestorAttributes.compactMap { $0[location] } + [own]).reduce(folder) { base, location in
+                    resolve(location, against: base, workspaceFolder: folder)
+                }
                 return url.pathExtension == BuildDeskConstants.ProjectLayout.projectExtension ? url.standardizedFileURL : nil
             }
+    }
+
+    /// "group:Apps" continues from the enclosing folder, "container:Apps" from the workspace's,
+    /// and "absolute:/path" stands alone.
+    private static func resolve(_ location: String, against base: URL, workspaceFolder: URL) -> URL {
+        guard let separator = location.firstIndex(of: ":") else { return base }
+        let path = String(location[location.index(after: separator)...])
+        if path.hasPrefix("/") { return URL(fileURLWithPath: path) }
+        let start = location[..<separator] == containerPrefix ? workspaceFolder : base
+        return path.isEmpty ? start : start.appendingPathComponent(path)
     }
 }
 

@@ -108,7 +108,7 @@ extension Device {
     var detail: String {
         let state = switch (kind, isReady, connection) {
         case (.simulator, _, _): isBooted ? "simulator, booted" : "simulator"
-        case (.physical, false, _): "not connected"
+        case (.physical, false, _): issue?.title ?? "not ready"
         case (.physical, true, .wired): "wired"
         case (.physical, true, _): "Wi-Fi"
         }

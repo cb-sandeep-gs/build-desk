@@ -36,6 +36,7 @@ output (`-json`, `--json-output`) only.
 | BD-1 Core | Swift package: scheme and target list, device list, build runner with parsed progress, tests. | Done 2026-11-12 |
 | BD-2 Main window | Scheme list, targets, device and configuration pickers, build and install, live progress. | Done 2026-11-12 |
 | BD-3 Menu bar | Popover with pinned pairs, finish notification, "install last build" without rebuilding. | Done 2026-11-13 |
+| BD-5 Team-ready | Project settings file, device checks with a fix for each problem, release script (Developer ID, notarization), known gaps closed. | Done 2026-11-13 |
 | BD-4 Extras | Several devices at once, drag in an `.ipa` or `.app`, device console, uninstall, commit shown per install. | Done 2026-11-13 |
 
 ## What BD-1 built
@@ -100,19 +101,33 @@ now stops whatever it was running, so no build or console session is left behind
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
 
+## What BD-5 built
+
+| Part | Types | What it does |
+|---|---|---|
+| Project settings | `ProjectConfig`, `ProjectConfigLoader` | `.builddesk.json` beside the project or above it up to the repository root: favorite schemes, hidden schemes (with `*`), default scheme and configuration. A broken file is reported in the sidebar and never stops a project from opening. Schema in `docs/builddesk.schema.json`. |
+| Device checks | `DeviceIssue`, `DeviceDiscovery.isLocked` | Each device that can't be used says why (not connected, not trusted, Developer Mode off) with the fix. A locked device is a hint, not a blocker, because the install still works. |
+| Release | `Scripts/release.sh` | Developer ID signing with the hardened runtime, notarization, stapling and a zip in `dist/`; `--adhoc` for a zip without a Developer ID. |
+| Closed gaps | — | A scheme named after its test target is listed under Tests. Projects inside workspace groups are found. Simulator versions read correctly for model-specific runtimes. |
+
+Tried on a temporary simulator with the real tools: build, install and launch (259 s), the console, install
+last build (19 s) and uninstall. The simulator was deleted afterwards.
+
 Known gaps:
 
 - **Not clicked through by hand yet.** The window and the menu bar popover were checked from rendered snapshots
   and the run path is tested with fakes; the same pipeline ran on a real device from the command line. A person
   still needs to press Build and Install, run a pin and see a notification once.
-- **Simulator install and launch** are covered by tests against a fake tool runner, not yet tried on a real simulator.
 - **Several devices at once** and **`.ipa` files** are covered by tests against fakes; only one device was
   connected and no `.ipa` was at hand.
-- **Uninstall** was not run against a real app, to keep the data of the app on the test device. The tool reports
-  success when asked to remove an app that is not installed, so Build Desk does too.
+- **Uninstall on a real device** was not run, to keep the data of the app on the test device; it was run for real
+  on a simulator. The tool reports success when asked to remove an app that is not installed, so Build Desk does too.
+- **A signed release has not been made.** `Scripts/release.sh` was run in `--adhoc` mode only; the Mac it was
+  written on has no Developer ID certificate. The signing and notarization steps are untried.
+- **Device checks for "not trusted" and "Developer Mode off"** are covered by tests on made-up tool output; no
+  device in that state was at hand. The lock check was read from a real, unlocked device.
+- **An iOS version newer than the installed Xcode supports** is not detected; the build fails with Xcode's own message.
 - **Console is standard output only.** Unified logging (`os_log`, `Logger`) needs a different tool and is not shown.
-- **A test scheme that also has a Run action** (it runs the host app) is listed under Apps.
-- **Workspace groups:** project references nested in workspace groups with their own paths are not followed.
 - **Progress on the first build of a scheme** is a busy bar; the measured bar needs one earlier build to compare with.
 
 ## Findings from BD-0

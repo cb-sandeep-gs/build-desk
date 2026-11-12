@@ -79,7 +79,7 @@ final class PinTests: XCTestCase {
             deviceID: Sample.offlinePhone.id, deviceName: Sample.offlinePhone.name
         )
         await app.run(offline)
-        XCTAssertEqual(app.pinError, "Old iPhone is not connected. Connect and unlock it.")
+        XCTAssertEqual(app.pinError, "Old iPhone is not connected. Connect it with a cable and unlock it.")
 
         let gone = PinnedRun(
             project: Sample.projectURL, scheme: "Removed", configuration: "Debug",

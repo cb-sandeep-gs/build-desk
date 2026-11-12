@@ -31,12 +31,15 @@ public struct ProjectReader: Sendable {
                 schemes += try self.schemes(in: projectURL).filter { scheme in !schemes.contains { $0.name == scheme.name } }
             }
         }
+        let loaded = ProjectConfigLoader.load(for: container)
         return ProjectSnapshot(
             container: container,
             schemes: schemes.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending },
             targets: targets,
             configurations: configurations,
-            defaultConfiguration: defaultConfiguration
+            defaultConfiguration: defaultConfiguration,
+            config: loaded.config,
+            configProblem: loaded.problem
         )
     }
 
@@ -58,7 +61,9 @@ public struct ProjectReader: Sendable {
             targets: quick.targets,
             // The project file is the source for a project; a workspace's own listing has none.
             configurations: quick.configurations.isEmpty ? listing.configurations : quick.configurations,
-            defaultConfiguration: quick.defaultConfiguration
+            defaultConfiguration: quick.defaultConfiguration,
+            config: quick.config,
+            configProblem: quick.configProblem
         )
     }
 

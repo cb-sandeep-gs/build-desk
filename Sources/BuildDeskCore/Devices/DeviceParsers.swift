@@ -11,6 +11,8 @@ enum DeviceCtlParser {
         static let wired = "wired"
         static let unavailable = "unavailable"
         static let booted = "booted"
+        static let paired = "paired"
+        static let disabled = "disabled"
     }
 
     /// Returns real devices only. devicectl also lists simulators in newer Xcode versions, but
@@ -37,6 +39,19 @@ enum DeviceCtlParser {
         case Value.wired: .wired
         default: .network
         }
+        let pairing = entry.properties?.connection?.pairingState ?? entry.connectionProperties?.pairingState
+        // The newer dictionary writes the mode as an object keyed by its name; the older as a string.
+        let developerMode = entry.properties?.state?.developerModeStatus?.keys.first ?? entry.deviceProperties?.developerModeStatus
+        // The most basic problem first: a device that is not reachable cannot report the others.
+        let issue: DeviceIssue? = if connection == .none || linkState == Value.unavailable {
+            .notConnected
+        } else if let pairing, pairing != Value.paired {
+            .notPaired
+        } else if developerMode == Value.disabled {
+            .developerModeOff
+        } else {
+            nil
+        }
         return Device(
             id: udid,
             name: entry.properties?.state?.name ?? entry.deviceProperties?.name ?? udid,
@@ -45,9 +60,9 @@ enum DeviceCtlParser {
             osVersion: entry.properties?.software?.osVersionNumber?.stringValue ?? entry.deviceProperties?.osVersionNumber ?? "",
             kind: .physical,
             connection: connection,
-            // A device this Mac only remembers has no transport and an unavailable link.
-            isReady: connection != .none && linkState != Value.unavailable,
-            isBooted: bootState == Value.booted
+            isReady: issue == nil,
+            isBooted: bootState == Value.booted,
+            issue: issue
         )
     }
 }
@@ -80,17 +95,25 @@ private struct DeviceCtlLegacyDevice: Decodable {
     let name: String?
     let osVersionNumber: String?
     let bootState: String?
+    let developerModeStatus: String?
 }
 
 private struct DeviceCtlLegacyConnection: Decodable {
     let transportType: String?
     let tunnelState: String?
+    let pairingState: String?
+}
+
+/// Stands for a JSON value whose content is not needed, only that it is there.
+private struct Ignored: Decodable {
+    init(from decoder: Decoder) throws {}
 }
 
 private struct DeviceCtlProperties: Decodable {
     struct Connection: Decodable {
         let transportType: String?
         let state: String?
+        let pairingState: String?
     }
 
     struct Software: Decodable {
@@ -104,12 +127,29 @@ private struct DeviceCtlProperties: Decodable {
     struct State: Decodable {
         let name: String?
         let bootState: String?
+        let developerModeStatus: [String: Ignored]?
     }
 
     let hardware: DeviceCtlHardware?
     let connection: Connection?
     let software: Software?
     let state: State?
+}
+
+/// Reads the JSON written by `devicectl device info lockState --json-output`.
+enum LockStateParser {
+    private struct Payload: Decodable {
+        let result: LockState
+    }
+
+    private struct LockState: Decodable {
+        let passcodeRequired: Bool?
+    }
+
+    /// True when the device is waiting for its passcode; nil when the output does not say.
+    static func isLocked(_ data: Data) -> Bool? {
+        (try? JSONDecoder().decode(Payload.self, from: data))?.result.passcodeRequired
+    }
 }
 
 /// Reads `simctl list devices --json`.
@@ -154,10 +194,12 @@ enum SimctlParser {
         }
     }
 
-    /// "com.apple.CoreSimulator.SimRuntime.iOS-27-2" → ("iOS", "27.2").
+    /// "com.apple.CoreSimulator.SimRuntime.iOS-27-2" → ("iOS", "27.2"). A runtime made for one
+    /// device model carries that model after the version ("iOS-27-2-iPhone19-4"); it is left out.
     private static func platformAndVersion(fromRuntime runtime: String) -> (platform: String, version: String) {
         let parts = runtime.replacingOccurrences(of: runtimePrefix, with: "").split(separator: "-")
         guard let platform = parts.first else { return ("", "") }
-        return (String(platform), parts.dropFirst().joined(separator: "."))
+        let version = parts.dropFirst().prefix { $0.allSatisfy(\.isNumber) }
+        return (String(platform), version.joined(separator: "."))
     }
 }
