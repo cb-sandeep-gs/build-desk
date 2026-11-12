@@ -88,6 +88,7 @@ Larger directions. Each would need its own plan before any code.
 
 | Direction | What it would be | Why it could matter |
 |---|---|---|
+| Release mode | A second mode beside Build that shows where each app stands and offers the release actions, driven by commands the project supplies | Planned in [RELEASE-INTEGRATION.md](RELEASE-INTEGRATION.md): a release contract in `.builddesk.json`, steps R0 to R4. |
 | Archive and export | Archive a scheme, export an `.ipa`, upload to TestFlight | Release builds without Xcode. May overlap with existing release tooling, so decide where it belongs first. |
 | Build another branch without switching | Build a branch or commit from a separate worktree | Install a colleague's branch on a device while your own checkout stays as it is. |
 | Explain a failed build | Send the errors of a failed build to a language model and show a short diagnosis with the likely fix | Signing and package errors are hard to read; the errors are already extracted. Must be opt-in, since it sends build output off the Mac. |
@@ -103,7 +104,7 @@ Larger directions. Each would need its own plan before any code.
 |---|---|---|
 | How can unified logging be read from a real device without Xcode? | BD-10 | `devicectl` has no command for it. `log stream` works for simulators (through `simctl spawn`). For devices, options are a private framework or a third-party tool; both have costs. |
 | Is one dependency acceptable for auto-update? | BD-11 | The package has no dependencies today. |
-| Where should archive and upload live? | Potentials | In Build Desk, or in the tooling that already handles releases. |
+| Where should archive and upload live? | Potentials | Tags and store status stay with the project and reach Build Desk through the release contract (RELEASE-INTEGRATION.md). Archiving and uploading from this Mac is still undecided. |
 | Which chat or status system would shared build status post to? | Potentials | Decides the format and the credentials needed. |
 | Should run history be shared by a team? | Shared build status | It is per person today (the newest 500 runs, on that Mac). Sharing needs a place to store it. |
 

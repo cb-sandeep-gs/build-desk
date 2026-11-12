@@ -3,7 +3,8 @@
 These rules apply to every code change and design decision in this repository.
 
 Plan and phase status: [docs/PLAN.md](docs/PLAN.md). Remaining work and future phases: [docs/ROADMAP.md](docs/ROADMAP.md);
-when a roadmap phase is built, move it to PLAN.md. Work one phase (BD-n) at a time; each phase ends with tests
+when a roadmap phase is built, move it to PLAN.md. The release integration (steps R0 to R4) is planned in
+[docs/RELEASE-INTEGRATION.md](docs/RELEASE-INTEGRATION.md). Work one phase (BD-n) at a time; each phase ends with tests
 and docs.
 
 ## Architecture
