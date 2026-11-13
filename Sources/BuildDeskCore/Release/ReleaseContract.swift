@@ -17,15 +17,19 @@ public struct ReleaseStatus: Sendable, Equatable, Codable {
     public let builds: [ReleaseBuild]
     /// Branches a TestFlight build can be made from; nil when the provider only tags the checkout.
     public let branches: [String]?
+    /// Actions the provider offers on an existing build: "notes", "testers". Nil when it offers none.
+    public let buildActions: [String]?
 
     public init(
-        contract: Int = ReleaseContract.version, head: ReleaseHead?, apps: [ReleaseApp], builds: [ReleaseBuild], branches: [String]? = nil
+        contract: Int = ReleaseContract.version, head: ReleaseHead?, apps: [ReleaseApp], builds: [ReleaseBuild], branches: [String]? = nil,
+        buildActions: [String]? = nil
     ) {
         self.contract = contract
         self.head = head
         self.apps = apps
         self.builds = builds
         self.branches = branches
+        self.buildActions = buildActions
     }
 }
 
@@ -143,10 +147,19 @@ public struct ReleaseAction: Sendable, Equatable {
     public enum Kind: String, Sendable {
         case testflight
         case store
+        /// Sets the notes testers see for an existing build.
+        case notes
+        /// Adds an existing build to the tester group its kind of build goes to.
+        case testers
+
+        /// True for an action on a build that already exists.
+        public var isBuildAction: Bool { self == .notes || self == .testers }
     }
 
     public let kind: Kind
     public let app: String
+    /// For an action on an existing build: the build's id.
+    public var build: String?
     /// For a test build: the track it goes on.
     public var track: String?
     /// For a test build: the branch to build; nil builds the checkout.
@@ -156,9 +169,13 @@ public struct ReleaseAction: Sendable, Equatable {
     /// Notes for a track whose notes are written by hand.
     public var notes: String?
 
-    public init(kind: Kind, app: String, track: String? = nil, branch: String? = nil, from: String? = nil, notes: String? = nil) {
+    public init(
+        kind: Kind, app: String, track: String? = nil, branch: String? = nil, from: String? = nil, notes: String? = nil,
+        build: String? = nil
+    ) {
         self.kind = kind
         self.app = app
+        self.build = build
         self.track = track
         self.branch = branch
         self.from = from

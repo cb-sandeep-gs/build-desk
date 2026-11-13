@@ -10,6 +10,10 @@ public protocol ReleaseProviding: Sendable {
     func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult
     /// Live state from the store. Read-only; needs the network.
     func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus
+    /// Saves a build's installable file into `folder`. Changes nothing on the store's side.
+    func artifact(of build: ReleaseBuild, to folder: URL, _ provider: ReleaseProvider) async throws -> ReleaseArtifact
+    /// Runs the project's go or no-go gates. Read-only; can take minutes.
+    func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks
 }
 
 /// The commands a project supplies, and the folder they are run from.
@@ -35,6 +39,8 @@ public struct ReleaseClient: ReleaseProviding {
         static let from = "--from"
         static let notesFile = "--notes-file"
         static let expect = "--expect"
+        static let build = "--build"
+        static let output = "--output"
     }
 
     private static let environmentTool = "/usr/bin/env"
@@ -77,8 +83,24 @@ public struct ReleaseClient: ReleaseProviding {
         return status
     }
 
+    public func artifact(of build: ReleaseBuild, to folder: URL, _ provider: ReleaseProvider) async throws -> ReleaseArtifact {
+        guard let command = provider.commands.artifact else { throw BuildDeskError.releaseCommandMissing(name: "artifact") }
+        let arguments = [Flag.app, build.app, Flag.build, build.id, Flag.output, folder.path]
+        let artifact: ReleaseArtifact = try await answer(of: command, arguments, provider, name: "artifact")
+        try Self.checkVersion(artifact.contract)
+        return artifact
+    }
+
+    public func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {
+        guard let command = provider.commands.checks else { throw BuildDeskError.releaseCommandMissing(name: "checks") }
+        let checks: ReleaseChecks = try await answer(of: command, [], provider, name: "checks")
+        try Self.checkVersion(checks.contract)
+        return checks
+    }
+
     static func arguments(for action: ReleaseAction, notesFile: URL?) -> [String] {
         var arguments = [Flag.action, action.kind.rawValue, Flag.app, action.app]
+        if let build = action.build { arguments += [Flag.build, build] }
         if let track = action.track { arguments += [Flag.track, track] }
         if let branch = action.branch, !branch.isEmpty { arguments += [Flag.branch, branch] }
         if let from = action.from { arguments += [Flag.from, from] }

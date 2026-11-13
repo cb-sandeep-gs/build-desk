@@ -57,6 +57,16 @@ public struct ReleaseActionSheet: View {
                             .overlay(RoundedRectangle(cornerRadius: Layout.cornerRadius).stroke(.quaternary))
                     }
                 }
+            case .notes:
+                field("What to test") {
+                    TextEditor(text: Binding(get: { model.action.notes ?? "" }, set: { model.action.notes = $0 }))
+                        .font(.body)
+                        .frame(height: Layout.planNotesHeight)
+                        .overlay(RoundedRectangle(cornerRadius: Layout.cornerRadius).stroke(.quaternary))
+                }
+            case .testers:
+                Text("The project decides which tester group this kind of build goes to. The plan below names it.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             case .store:
                 field("Shipped build") {
                     Picker("Shipped build", selection: $model.action.from) {
@@ -126,7 +136,7 @@ public struct ReleaseActionSheet: View {
                 Button("Cancel", action: close).keyboardShortcut(.cancelAction).disabled(model.runState == .running)
                 if let plan = model.plan.value {
                     // The button names what it will create, so the last click is never a blind one.
-                    Button("Create \(plan.title)") { Task { await model.confirm() } }
+                    Button(model.confirmTitle(for: plan)) { Task { await model.confirm() } }
                         .buttonStyle(.borderedProminent)
                         .disabled(!model.canConfirm)
                         .accessibilityIdentifier(AccessibilityID.releaseConfirm)

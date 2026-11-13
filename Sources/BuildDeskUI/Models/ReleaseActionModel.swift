@@ -28,6 +28,8 @@ public final class ReleaseActionModel {
     public private(set) var runState: ReleaseRunState = .idle
 
     public let app: ReleaseApp
+    /// For an action on an existing build: that build.
+    public private(set) var build: ReleaseBuild?
     /// Test builds of the app that a store release can be made from, newest first.
     public let shippedCandidates: [ReleaseBuild]
     public let branches: [String]
@@ -48,13 +50,41 @@ public final class ReleaseActionModel {
         // Start on the first track and the newest test build: the usual choice, one click from a plan.
         case .testflight: action = ReleaseAction(kind: .testflight, app: app.id, track: app.tracks.first?.id)
         case .store: action = ReleaseAction(kind: .store, app: app.id, from: shippedCandidates.first?.id)
+        // An action on an existing build is started with that build (the other initializer).
+        case .notes, .testers: action = ReleaseAction(kind: kind, app: app.id)
         }
+    }
+
+    /// An action on a build that already exists: its notes for testers, or its tester group.
+    init(
+        kind: ReleaseAction.Kind, build: ReleaseBuild, app: ReleaseApp, status: ReleaseStatus, provider: ReleaseProvider,
+        client: any ReleaseProviding
+    ) {
+        self.app = app
+        self.provider = provider
+        self.client = client
+        self.build = build
+        shippedCandidates = []
+        branches = []
+        checkoutBranch = status.head?.branch
+        action = ReleaseAction(kind: kind, app: app.id, build: build.id)
     }
 
     public var title: String {
         switch action.kind {
         case .testflight: "New test build of \(app.name)"
         case .store: "Store release of \(app.name)"
+        case .notes: "What to test in \(build?.version ?? app.name)"
+        case .testers: "Add \(build?.version ?? "this build") to testers"
+        }
+    }
+
+    /// What the confirm button says: it names what the click does.
+    public func confirmTitle(for plan: ReleasePlan) -> String {
+        switch action.kind {
+        case .testflight, .store: "Create \(plan.title)"
+        case .notes: "Save Notes"
+        case .testers: "Add to Testers"
         }
     }
 
@@ -77,6 +107,12 @@ public final class ReleaseActionModel {
             }
         case .store:
             guard action.from != nil else { return "Choose the test build that was shipped." }
+        case .notes:
+            if (action.notes ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "Write what testers should look at in this build."
+            }
+        case .testers:
+            break
         }
         return nil
     }

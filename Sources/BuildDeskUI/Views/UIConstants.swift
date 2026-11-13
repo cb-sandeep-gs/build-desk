@@ -83,6 +83,8 @@ public enum AccessibilityID {
     public static let taggedInstall = "tagged-install"
     public static let toolbarStatus = "toolbar-status"
     public static let releaseInspector = "release-inspector"
+    public static let downloadArtifact = "download-artifact"
+    public static let releaseChecks = "release-checks"
     public static let releaseTable = "release-table"
     public static let activityView = "activity-view"
     public static let taggedInstallButton = "tagged-install-button"

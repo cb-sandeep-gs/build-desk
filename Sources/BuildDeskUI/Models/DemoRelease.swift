@@ -52,7 +52,7 @@ struct DemoRelease: ReleaseProviding {
                 build("HarborInternal-4.2.1", "internal", "4.2.1", daysAgo: 8, notes: "First build of 4.2"),
                 store,
             ],
-            branches: ["develop", "main", "feature/checkout"]
+            branches: ["develop", "main", "feature/checkout"], buildActions: ["notes", "testers"]
         )
     }
 
@@ -68,6 +68,23 @@ struct DemoRelease: ReleaseProviding {
 
     func run(_ action: ReleaseAction, confirming plan: ReleasePlan, _ provider: ReleaseProvider) async throws -> ReleaseResult {
         ReleaseResult(result: plan.title, done: ["Created tag \(plan.title)", "Pushed the tag"])
+    }
+
+    func artifact(of build: ReleaseBuild, to folder: URL, _ provider: ReleaseProvider) async throws -> ReleaseArtifact {
+        ReleaseArtifact(file: folder.appendingPathComponent("\(build.id)-ad-hoc.ipa").path, kind: "ad-hoc", bytes: 61_000_000)
+    }
+
+    func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {
+        ReleaseChecks(
+            isGo: false,
+            gates: [
+                ReleaseGate(title: "Generated files are current", passed: true, seconds: 4),
+                ReleaseGate(title: "No known security issues in packages", passed: false, seconds: 21),
+                ReleaseGate(title: "Documents match the code", passed: true, seconds: 3),
+                ReleaseGate(title: "Style rules", passed: false, blocking: false, seconds: 9),
+            ],
+            hint: "Fix: No known security issues in packages. Update the package named in the scan."
+        )
     }
 
     func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus {

@@ -237,7 +237,9 @@ func release(_ arguments: Arguments) async throws {
     case "store": try await releaseStore(provider, arguments)
     case "plan": try await releasePlan(provider, arguments)
     case "source": try await releaseSource(provider, container, arguments)
-    default: throw UsageError(message: "release takes status, store, plan or source.")
+    case "file": try await releaseFile(provider, arguments)
+    case "check": try await releaseCheck(provider, arguments)
+    default: throw UsageError(message: "release takes status, store, plan, source, file or check.")
     }
 }
 
@@ -276,6 +278,31 @@ func releasePlan(_ provider: ReleaseProvider, _ arguments: Arguments) async thro
     plan.steps.enumerated().forEach { print("  \($0.offset + 1). \($0.element)") }
     (plan.warnings ?? []).forEach { print("  warning: \($0)") }
     if let notes = plan.notes { print("\nNotes:\n\(notes)") }
+}
+
+/// `release file <project> --build <id> --output <folder>`: saves the file the cloud build made.
+func releaseFile(_ provider: ReleaseProvider, _ arguments: Arguments) async throws {
+    let id = try arguments.required(CLI.Option.build)
+    let folder = URL(fileURLWithPath: try arguments.required(CLI.Option.output))
+    let status = try await ReleaseClient().status(provider)
+    guard let build = status.builds.first(where: { $0.id == id }) else {
+        throw UsageError(message: "The project lists no build named \(id). See `builddesk release status`.")
+    }
+    let artifact = try await ReleaseClient().artifact(of: build, to: folder, provider)
+    print(artifact.file)
+}
+
+/// `release check <project>`: the project's go or no-go gates. Exit code 1 on a no-go.
+func releaseCheck(_ provider: ReleaseProvider, _ arguments: Arguments) async throws {
+    let checks = try await ReleaseClient().checks(provider)
+    if arguments.has(CLI.Flag.json) { return try Output.json(checks) }
+    Output.table(checks.gates.map { gate in
+        let result = gate.passed ? "  passed" : gate.blocking ? "  FAILED" : "  warning"
+        return [result, gate.title, gate.seconds.map { "\(Int($0.rounded())) s" } ?? ""]
+    })
+    print(checks.isGo ? "GO" : "NO-GO")
+    if let hint = checks.hint { print(hint) }
+    if !checks.isGo { throw TestsFailed() }
 }
 
 /// `release source <project> --build <id>`: makes the build's code ready in Build Desk's own folder

@@ -32,6 +32,22 @@ struct FakeReleases: ReleaseProviding {
     let storeStatus = Locked<Result<ReleaseStoreStatus, BuildDeskError>>(.success(Sample.storeStatus))
     let storeCalls = Locked(0)
 
+    let artifactResult = Locked<Result<ReleaseArtifact, BuildDeskError>>(.success(ReleaseArtifact(file: "/downloads/Sample.ipa")))
+    /// Each download as "build id → folder".
+    let downloads = Locked<[String]>([])
+    let checksResult = Locked<Result<ReleaseChecks, BuildDeskError>>(
+        .success(ReleaseChecks(isGo: true, gates: [ReleaseGate(title: "Generated files", passed: true)]))
+    )
+
+    func artifact(of build: ReleaseBuild, to folder: URL, _ provider: ReleaseProvider) async throws -> ReleaseArtifact {
+        downloads.value += ["\(build.id) → \(folder.path)"]
+        return try artifactResult.value.get()
+    }
+
+    func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {
+        try checksResult.value.get()
+    }
+
     func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus {
         storeCalls.value += 1
         return try storeStatus.value.get()

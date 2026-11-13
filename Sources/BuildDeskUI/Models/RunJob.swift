@@ -134,6 +134,14 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
 
     public func remove(_ source: TaggedSource) async throws {}
 
+    public func artifact(of build: ReleaseBuild, to folder: URL, _ provider: ReleaseProvider) async throws -> ReleaseArtifact {
+        throw BuildDeskError.releaseCommandMissing(name: "artifact")
+    }
+
+    public func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {
+        throw BuildDeskError.releaseCommandMissing(name: "checks")
+    }
+
     public func status(_ provider: ReleaseProvider) async throws -> ReleaseStatus {
         ReleaseStatus(head: nil, apps: [], builds: [])
     }

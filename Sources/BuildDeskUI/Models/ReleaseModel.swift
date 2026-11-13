@@ -36,11 +36,24 @@ public final class ReleaseModel {
     /// The release action in progress, shown as a sheet; nil when none is.
     public internal(set) var activeAction: ReleaseActionModel?
 
-    private let client: any ReleaseProviding
+    /// The build file last asked for; nil when none was.
+    public internal(set) var download: ReleaseDownload?
+    /// The project's go or no-go gates, once they were run.
+    public internal(set) var checks: LoadState<ReleaseChecks> = .idle
+    /// True while the checks sheet is open.
+    public var showsChecks = false
 
-    public init(provider: ReleaseProvider, client: any ReleaseProviding) {
+    // Internal, not private: the model's features are split across files as extensions.
+    let client: any ReleaseProviding
+    /// Where a build's file is saved.
+    let downloadsFolder: URL
+
+    public init(provider: ReleaseProvider, client: any ReleaseProviding, downloadsFolder: URL? = nil) {
         self.provider = provider
         self.client = client
+        self.downloadsFolder = downloadsFolder
+            ?? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
     }
 
     public var status: ReleaseStatus? { state.value }

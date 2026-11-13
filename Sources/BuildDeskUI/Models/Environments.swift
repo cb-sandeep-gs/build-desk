@@ -104,7 +104,7 @@ public enum Demo {
         case .release:
             app.mode = .release
             await app.release?.refresh()
-            app.release?.selectedBuildID = "HarborInternal-4.2.3"
+            app.release?.selectedBuildID = "HarborInternal-4.2.2"
         case .releaseAction:
             app.mode = .release
             await app.release?.refresh()
@@ -199,7 +199,8 @@ public enum Demo {
             config: ProjectConfig(
                 favoriteSchemes: ["Harbor", "Harbor Staging"], hiddenSchemes: ["*Tests"],
                 release: ReleaseCommands(
-                    status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"], store: ["./tool", "store"]
+                    status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"], checks: ["./tool", "checks"],
+                    store: ["./tool", "store"], artifact: ["./tool", "artifact"]
                 )
             ),
             configFolder: URL(fileURLWithPath: "/Projects/Harbor")

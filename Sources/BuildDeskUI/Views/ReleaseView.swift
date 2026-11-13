@@ -41,6 +41,7 @@ struct ReleaseView: View {
                 ReleaseActionSheet(model: action) { Task { await release.endAction() } }
             }
         }
+        .sheet(isPresented: $release.showsChecks) { ReleaseChecksSheet(release: release) }
         .confirmationDialog(
             "Build and install \(pendingInstall?.version ?? "this build")?",
             isPresented: Binding(get: { pendingInstall != nil }, set: { isShown in if !isShown { pendingInstall = nil } }),
@@ -142,6 +143,12 @@ struct ReleaseView: View {
     /// Each action opens a sheet that previews it; nothing is done from here.
     @ViewBuilder
     private func actionButtons(_ selected: ReleaseApp) -> some View {
+        if release.hasChecks {
+            Button("Check…", systemImage: "checklist") { release.showsChecks = true }
+                .fixedSize()
+                .help("Run the project's go or no-go checks before a release")
+                .accessibilityIdentifier(AccessibilityID.releaseChecks)
+        }
         if release.canAct {
             Button("Store Release…", systemImage: "bag") { release.begin(.store) }
                 .fixedSize()

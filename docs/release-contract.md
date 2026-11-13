@@ -154,3 +154,47 @@ Optional. Called after `status`, with no extra arguments. It may use the network
 
 `checks` (go or no-go gates) is a reserved name in the settings file; its shape is added to this document when
 Build Desk reads it.
+
+## Per-build commands (optional)
+
+These work on a build that already exists. A provider that has none of them is still complete.
+
+### `artifact`
+
+Named as `"artifact"` in the `release` section. Build Desk appends `--app <id> --build <id> --output <folder>`.
+The provider saves the build's installable file into the folder and prints where it is. It must not change
+anything on the store's side.
+
+```json
+{"contract": 1, "file": "/Users/you/Downloads/ShopInternal-4.2.3-ad-hoc.ipa", "kind": "ad-hoc", "bytes": 61000000}
+```
+
+Build Desk offers it for builds whose cloud build succeeded, then shows the file in Finder or installs it on a
+device like any dropped app file.
+
+### `checks`
+
+Named as `"checks"`. No flags. The provider runs its go or no-go gates and prints each result. Read-only; it may
+take minutes.
+
+```json
+{"contract": 1, "go": false, "hint": "Fix: Packages.",
+ "gates": [{"title": "Packages", "passed": false, "blocking": true, "seconds": 21.5},
+           {"title": "Style", "passed": false, "blocking": false, "seconds": 3}]}
+```
+
+A gate with `"blocking": false` only advises: its failure does not make a no-go.
+
+### Actions on a build: `notes` and `testers`
+
+The status lists what the provider offers in `"buildActions": ["notes", "testers"]`. They use the same `plan`
+and `run` commands as the tagging actions, with `--action notes|testers --app <id> --build <id>`, and for notes
+`--notes-file <path>`.
+
+| Action | What `run` does |
+|---|---|
+| `notes` | Sets the notes testers see for the build. |
+| `testers` | Adds the build to the tester group its kind of build goes to. The provider decides the group and must refuse a wrong one. |
+
+`plan` reads only and answers with a plan whose `commit` is null (these do not depend on where the code is), so
+`run` gets no `--expect`. `run` writes to the store and is called only after the person confirmed the plan.

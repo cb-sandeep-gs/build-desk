@@ -1,3 +1,4 @@
+import AppKit
 import BuildDeskCore
 import SwiftUI
 
@@ -93,15 +94,65 @@ struct ReleaseInspector: View {
             if let blocker {
                 Text(blocker).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            if release.canAct, build.kind == .testflight {
-                Button {
-                    release.beginStoreRelease(of: build)
-                } label: {
-                    Label("Mark as Store Release…", systemImage: "bag").frame(maxWidth: .infinity)
+            if release.canDownload(build) { downloadRow }
+            if release.offers(.notes, for: build) {
+                wideButton("Edit What to Test…", "text.bubble", help: "Set the notes testers see for this build") {
+                    release.begin(.notes, for: build)
                 }
-                .help("Record that this build is the one that shipped to the store")
+            }
+            if release.offers(.testers, for: build) {
+                wideButton("Add to Testers…", "person.2", help: "Add this build to the tester group its kind of build goes to") {
+                    release.begin(.testers, for: build)
+                }
+            }
+            if release.canAct, build.kind == .testflight {
+                wideButton("Mark as Store Release…", "bag", help: "Record that this build is the one that shipped to the store") {
+                    release.beginStoreRelease(of: build)
+                }
             }
         }
         .controlSize(.large)
+    }
+
+    private func wideButton(_ title: String, _ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol).frame(maxWidth: .infinity)
+        }
+        .help(help)
+    }
+
+    /// The build's own file from the cloud build: fetch it, then show it or install it.
+    @ViewBuilder private var downloadRow: some View {
+        switch release.download(of: build)?.phase {
+        case .running:
+            HStack(spacing: Layout.spacingSmall) {
+                ProgressView().controlSize(.small)
+                Text("Downloading the app file…").font(.callout).foregroundStyle(.secondary)
+            }
+        case .done(let file):
+            VStack(alignment: .leading, spacing: Layout.spacingSmall / 2) {
+                Label(file.lastPathComponent, systemImage: "checkmark.circle.fill")
+                    .font(.callout).foregroundStyle(.green).lineLimit(2).truncationMode(.middle)
+                HStack(spacing: Layout.spacing) {
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
+                    // The same path as a dropped app file: choose a device, then install.
+                    Button("Install…") { Task { await app.openDropped(file) } }
+                }
+                .buttonStyle(.link)
+                .controlSize(.regular)
+            }
+        case .failed(let message):
+            Text(message).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+            downloadButton
+        case nil:
+            downloadButton
+        }
+    }
+
+    private var downloadButton: some View {
+        wideButton("Download App File", "square.and.arrow.down", help: "Save the file the cloud build made, to install or share") {
+            Task { await release.downloadArtifact(of: build) }
+        }
+        .accessibilityIdentifier(AccessibilityID.downloadArtifact)
     }
 }

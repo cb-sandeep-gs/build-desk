@@ -25,6 +25,7 @@ enum Snapshot {
         static let releaseSheet = "--release-sheet"
         static let releaseInstall = "--release-install"
         static let activity = "--activity"
+        static let releaseChecks = "--release-checks"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -80,6 +81,24 @@ enum Snapshot {
         }
     }
 
+    /// The menu bar popover and the sheets are drawn in a bare window as tall as their content; the
+    /// main window in a titled one of the requested size.
+    private static func makeContent(_ arguments: [String], _ model: AppModel) async -> NSView {
+        if arguments.contains(Argument.releaseChecks), let release = model.release {
+            await release.runChecks()
+            return NSHostingView(rootView: ReleaseChecksSheet(release: release).background(.background))
+        } else if arguments.contains(Argument.releaseSheet), let action = model.release?.activeAction {
+            return NSHostingView(rootView: ReleaseActionSheet(model: action) {}.background(.background))
+        } else if arguments.contains(Argument.settings) {
+            return NSHostingView(rootView: SettingsView(app: model).background(.background))
+        } else if arguments.contains(Argument.menu) {
+            return NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))
+        } else if arguments.contains(Argument.sheet), let artifact = model.pendingArtifact {
+            return NSHostingView(rootView: ArtifactInstallSheet(app: model, artifact: artifact).background(.background))
+        }
+        return NSHostingView(rootView: BuildDeskRootView(app: model, autoloads: false))
+    }
+
     static func run(arguments: [String]) async -> Int32 {
         guard let output = value(after: Argument.snapshot, in: arguments) else { return EXIT_FAILURE }
         let size = CGSize(
@@ -93,20 +112,7 @@ enum Snapshot {
         if arguments.contains(Argument.menu) { await model.release?.refresh() }
         if arguments.contains(Argument.activity) { model.mode = .activity }
 
-        // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
-        // content; the main window in a titled one of the requested size.
-        let content: NSView
-        if arguments.contains(Argument.releaseSheet), let action = model.release?.activeAction {
-            content = NSHostingView(rootView: ReleaseActionSheet(model: action) {}.background(.background))
-        } else if arguments.contains(Argument.settings) {
-            content = NSHostingView(rootView: SettingsView(app: model).background(.background))
-        } else if arguments.contains(Argument.menu) {
-            content = NSHostingView(rootView: MenuBarView(app: model) {}.background(.background))
-        } else if arguments.contains(Argument.sheet), let artifact = model.pendingArtifact {
-            content = NSHostingView(rootView: ArtifactInstallSheet(app: model, artifact: artifact).background(.background))
-        } else {
-            content = NSHostingView(rootView: BuildDeskRootView(app: model, autoloads: false))
-        }
+        let content = await makeContent(arguments, model)
         let isMenu = !(content is NSHostingView<BuildDeskRootView>)
         let frame = CGRect(origin: offscreenOrigin, size: isMenu ? content.fittingSize : size)
         let window = NSWindow(

@@ -83,6 +83,8 @@ enum CLI {
       builddesk release store <project> [--json]
       builddesk release plan <project> --action testflight|store --app <id>
       builddesk release source <project> --build <id>
+      builddesk release file <project> --build <id> --output <folder>
+      builddesk release check <project> [--json]
                              [--track <id>] [--branch <name>] [--from <build>]
 
     <project> is a .xcodeproj or .xcworkspace.
@@ -102,7 +104,8 @@ enum CLI {
     build and testing state; plan shows what an action would do and changes nothing.
     Running an action is done from the app, after a confirmation. source makes a build's
     code ready in Build Desk's own folder and prints the project path there, to pass to run;
-    your checkout is not touched.
+    your checkout is not touched. file saves the app file the cloud build made. check runs the
+    project's go or no-go gates and exits with 1 on a no-go.
 
     crashes lists the crash logs of an app (named after its process, such as "Sample"), newest
     first, and copies them to the folder given with --output.

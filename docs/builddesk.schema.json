@@ -65,7 +65,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Prints the go or no-go gates. Reserved."
+          "description": "Runs the go or no-go gates and prints each result. Read-only."
         },
         "store": {
           "type": "array",
@@ -74,6 +74,14 @@
           },
           "minItems": 1,
           "description": "Prints live state from the store: per build its cloud run, testing state and tester groups. Read-only."
+        },
+        "artifact": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Saves a build's installable file to a folder and prints where it is."
         }
       }
     }

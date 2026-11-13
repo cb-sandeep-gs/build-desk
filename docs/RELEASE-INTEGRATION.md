@@ -1,7 +1,7 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Steps R0, R1 and R2 are built, the read-only half of R3, and and of R4 the menu bar status, the notifications and installing a tagged build; the rest of R3 and R4 are not. The contract itself is described for providers in
+Written 2026-11-13. Steps R0, R1 and R2 are built, the read-only half of R3, and all of R3, and of R4 the menu bar status, the notifications, installing a tagged build, the app file download and the release checks. The contract itself is described for providers in
 [release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
@@ -175,7 +175,19 @@ then installed and launched as the tagged version. The copy's build folder was 4
 3.8 GB of package checkouts, which is why removing the files deletes that whole folder. Not tried: the button in
 the window by hand, and a real device (installing an older version over the app on a phone can upset its data).
 
-Not built in R4: checks on a local build (the provider's checks command prints text, not JSON, today).
+## What the per-build commands built (2026-11-13)
+
+| Part | Where | What it does |
+|---|---|---|
+| App file | `artifact` command, `ReleaseClient.artifact`, `ReleaseModel.downloadArtifact` | The inspector's Download App File saves the file the cloud build made (for the first provider: the ad hoc `.ipa`) into Downloads, then offers Show in Finder and Install, which goes through the same sheet as a dropped app file. |
+| Notes and testers | `ReleaseAction.Kind.notes` / `.testers`, `ReleaseModel.begin(_:for:)` | Edit What to Test and Add to Testers in the inspector, for builds the store knows. They use the plan-then-confirm sheet: the plan names the build number and the group before anything is written. |
+| Checks | `checks` command, `ReleaseChecks`, `ReleaseChecksSheet` | Check in the Release page runs the project's gates and shows go or no-go with each gate, advisory ones marked. |
+| Command line | `builddesk release file`, `builddesk release check` | The same from a terminal. |
+
+Tried with the first provider and a real store key, reading only: the plans for notes and for testers named the
+right build number and group for an internal and a partner build; the app file (75 MB) was saved in 18 seconds,
+also through Build Desk's own client; the checks ran in about 100 seconds and answered no-go with each gate.
+Not tried: `run` for notes or testers, because it changes a real build in the store.
 
 ## The first provider
 

@@ -75,6 +75,10 @@ configuration selected in Build mode; your checkout is not touched. It is the ta
 file testers got. The first build from a tag is a full one and resolves the packages again; later ones reuse it.
 The line under the list shows how much disk these files take and removes them.
 
+For a build the store knows, the inspector also has **Download App File** (the file the cloud build made, to
+install or share), **Edit What to Test** and **Add to Testers**. The last two show a plan first and write to the
+store only after you confirm. **Check** on the Release page runs the project's go or no-go gates.
+
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
 build of that scheme had.
@@ -167,6 +171,8 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk release status <project>` | Where each app stands: version, store release and the latest build per track, from the project's own release commands. |
 | `builddesk release store <project>` | Each build's cloud build result, testing state and tester groups. |
 | `builddesk release plan <project> --action testflight\|store --app <id>` | What a release action would do, with its notes. Changes nothing. |
+| `builddesk release file <project> --build <id> --output <folder>` | Saves the app file the cloud build made. |
+| `builddesk release check <project>` | Runs the project's go or no-go gates; exit code 1 on a no-go. |
 | `builddesk release source <project> --build <id>` | Makes the build's tagged code ready in Build Desk's own folder and prints the project path there, to pass to `builddesk run`. Your checkout is not touched. |
 | `builddesk test <project> --scheme <name> --device <name-or-udid>` | Runs the scheme's tests and prints the failures. `--only <Bundle[/Class[/test]]>` limits the run. Exits with 2 when tests failed. |
 
