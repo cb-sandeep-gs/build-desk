@@ -80,7 +80,7 @@ and dark:
 ```bash
 .build/debug/BuildDeskApp --snapshot window.png
 .build/debug/BuildDeskApp --snapshot small-dark.png --dark --width 760 --height 480
-.build/debug/BuildDeskApp --snapshot menu.png --menu        # the menu bar popover
+.build/debug/BuildDeskApp --snapshot menu.png --menu        # the menu bar popover, with its release lines
 .build/debug/BuildDeskApp --snapshot after.png --installed  # last-install line and console
 .build/debug/BuildDeskApp --snapshot sheet.png --sheet      # the app-file sheet
 .build/debug/BuildDeskApp --snapshot tests.png --tested     # test results

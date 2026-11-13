@@ -97,6 +97,7 @@ public final class PreferenceStore {
         static let launchTexts = "launchTexts"
         static let scheduleIsEnabled = "scheduleIsEnabled"
         static let scheduleMinuteOfDay = "scheduleMinuteOfDay"
+        static let watchesReleases = "watchesReleases"
     }
 
     /// 09:00, a little before most working days start.
@@ -174,6 +175,12 @@ public final class PreferenceStore {
     }
 
     /// The time of that daily build, in minutes after midnight.
+    /// Defaults to true: a project that can tell its store state is watched unless the person says no.
+    public var watchesReleases: Bool {
+        get { defaults.object(forKey: Key.watchesReleases) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.watchesReleases) }
+    }
+
     public var scheduleMinuteOfDay: Int {
         get { defaults.object(forKey: Key.scheduleMinuteOfDay) as? Int ?? Self.defaultScheduleMinuteOfDay }
         set { defaults.set(newValue, forKey: Key.scheduleMinuteOfDay) }

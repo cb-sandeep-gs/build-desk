@@ -49,6 +49,13 @@ public struct MenuBarView: View {
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if let release = app.release, !release.menuLines.isEmpty {
+                Divider()
+                MenuBarReleaseSection(release: release) {
+                    app.mode = .release
+                    openMainWindow()
+                }
+            }
             Divider()
             HStack {
                 Button("Open Build Desk", action: openMainWindow)

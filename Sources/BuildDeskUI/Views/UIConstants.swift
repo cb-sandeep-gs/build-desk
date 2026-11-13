@@ -72,6 +72,8 @@ public enum AccessibilityID {
     public static let newTestBuild = "new-test-build"
     public static let releaseConfirm = "release-confirm"
     public static let scheduleToggle = "schedule-toggle"
+    public static let releaseWatchToggle = "release-watch-toggle"
+    public static let menuBarReleases = "menu-bar-releases"
     public static let history = "history"
     public static let cleanButton = "clean-button"
     public static let stopButton = "stop-button"

@@ -88,7 +88,7 @@ Larger directions. Each would need its own plan before any code.
 
 | Direction | What it would be | Why it could matter |
 |---|---|---|
-| Release mode | A second mode beside Build that shows where each app stands and offers the release actions, driven by commands the project supplies | Planned in [RELEASE-INTEGRATION.md](RELEASE-INTEGRATION.md): a release contract in `.builddesk.json`, steps R0 to R4. R0 (the contract, its client and the first provider) is built. |
+| Release mode | A second mode beside Build that shows where each app stands and offers the release actions, driven by commands the project supplies | Planned in [RELEASE-INTEGRATION.md](RELEASE-INTEGRATION.md): a release contract in `.builddesk.json`, steps R0 to R4. Built so far: R0 to R2, the reading half of R3, and the menu bar status and notifications of R4. Open: store writes, checks on a local build, installing a tagged build. |
 | Archive and export | Archive a scheme, export an `.ipa`, upload to TestFlight | Release builds without Xcode. May overlap with existing release tooling, so decide where it belongs first. |
 | Build another branch without switching | Build a branch or commit from a separate worktree | Install a colleague's branch on a device while your own checkout stays as it is. |
 | Explain a failed build | Send the errors of a failed build to a language model and show a short diagnosis with the likely fix | Signing and package errors are hard to read; the errors are already extracted. Must be opt-in, since it sends build output off the Mac. |

@@ -3,7 +3,7 @@ import Foundation
 /// Every tool path, file name and limit Build Desk uses, in one place.
 public enum BuildDeskConstants {
     /// The version of the app and the command-line tool. `Scripts/build-app.sh` reads it from here.
-    public static let version = "0.15.0"
+    public static let version = "0.16.0"
 
     /// Absolute paths of the Apple tools Build Desk drives. `xcrun` finds `devicectl` and `simctl`
     /// inside the selected Xcode.
@@ -35,6 +35,14 @@ public enum BuildDeskConstants {
         public static let keptRuns = 20
         /// Lines of a failed tool's output carried in the error shown to the user.
         public static let failureTailLines = 12
+    }
+
+    /// How often the store is asked for the state of release builds while Build Desk is open.
+    public enum ReleaseWatch {
+        /// While a cloud build is running: often enough to notice the end within a minute.
+        public static let activeSeconds: TimeInterval = 60
+        /// With nothing running: only to notice a build someone else started.
+        public static let idleSeconds: TimeInterval = 15 * 60
     }
 
     /// The configuration used when the caller does not pick one and the project names no default.

@@ -86,6 +86,8 @@ enum Snapshot {
         NSApplication.shared.setActivationPolicy(.accessory)
 
         let model = await makeModel(arguments)
+        // The popover shows release lines once the status has been read; the app's watch does that.
+        if arguments.contains(Argument.menu) { await model.release?.refresh() }
 
         // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
         // content; the main window in a titled one of the requested size.

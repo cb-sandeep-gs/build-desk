@@ -58,7 +58,9 @@ appears in the toolbar. Release shows each app's version in code, what is on the
 track and the recent builds, all read through the project's own commands. **New Test Build** and **Store
 Release** open a sheet that first shows what will happen (the steps and the notes); nothing is tagged or pushed
 until you press the confirm button, which names what it will create. When the project also has a store
-command and you are connected, each build shows how its cloud build went and whether it is in testing.
+command and you are connected, each build shows how its cloud build went and whether it is in testing. The
+menu bar popover then lists each app with its newest build, and a notification tells you when a cloud build
+ends or a build reaches testers (Settings, **Watch release builds**).
 
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier

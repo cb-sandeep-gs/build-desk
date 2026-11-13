@@ -1,7 +1,7 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Steps R0, R1 and R2 are built, and the read-only half of R3; the rest of R3 and R4 are not. The contract itself is described for providers in
+Written 2026-11-13. Steps R0, R1 and R2 are built, the read-only half of R3, and the menu bar status and notifications of R4; the rest of R3 and R4 are not. The contract itself is described for providers in
 [release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
@@ -88,7 +88,7 @@ the action in full ("Create tag and push"). Nothing is run from a preview.
 | R1 Read-only Release mode (done 2026-11-13) | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
 | R2 Tagging (done 2026-11-13) | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
 | R3 Store (reading done 2026-11-13) | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
-| R4 Build Desk extras | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
+| R4 Build Desk extras (menu bar status done 2026-11-13) | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
 
 R1 and R2 need no store credentials. R3 shows "not connected" until the person has connected the provider.
 
@@ -149,6 +149,22 @@ state and groups in about six seconds, including one build whose cloud run had f
 Not built in R3: editing the tester notes of a build and adding a build to a tester group. Both write to the store
 on the person's behalf, so they need a decision on how the contract describes per-build actions, and they cannot
 be tried without changing a real build.
+
+## What R4 built so far
+
+| Part | Where | What it does |
+|---|---|---|
+| Watch | `ReleaseWatch`, `ReleaseWatchModel` | While Build Desk is open and the project has a `store` command, the status and the store are read again: every minute while a cloud build is running, every 15 minutes otherwise (`BuildDeskConstants.ReleaseWatch`). It only runs the `status` and `store` commands. |
+| Notifications | `ReleaseChange`, `RunNotice.make(for:appName:)` | Two readings are compared. A cloud build that ended (succeeded or failed) and a build that reached testers are each announced once. The first reading, a reading after "not connected" and a state that did not move announce nothing. Someone looking at Release mode is not told what is already on screen. |
+| Menu bar | `MenuBarReleaseSection`, `ReleaseModel.menuLines` | The popover has a Releases part: one line per app with its version and where its running or newest build stands, the number of alerts, and Open Release, which shows Release mode in the window. |
+| Setting | Settings, "Watch release builds" | On by default; off stops the reading. |
+
+Tried with the first provider and a real store key: the popover showed both apps with their newest build and its
+testing state after one reading of about eight seconds. A change between two readings was tried with made-up
+data only, because a real one needs a real cloud build.
+
+Not built in R4: checks on a local build (the provider's checks command prints text, not JSON, today) and
+installing a tagged build on a device (it means building a commit other than the checkout).
 
 ## The first provider
 

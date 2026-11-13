@@ -12,6 +12,8 @@ struct BuildDeskApp: App {
             BuildDeskRootView(app: model)
                 // The daily build starts counting as soon as the app is up.
                 .task { model.schedule.restart() }
+                // Release builds are watched from the start too, for the menu bar and notifications.
+                .task { model.releaseWatch.activate() }
         }
         .defaultSize(width: Layout.windowDefaultWidth, height: Layout.windowDefaultHeight)
         .windowResizability(.contentMinSize)

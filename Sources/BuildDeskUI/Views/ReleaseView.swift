@@ -196,20 +196,9 @@ private struct StoreState: View {
             case .failed: Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
             case nil: EmptyView()
             }
-            Text(text).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+            Text(store.stateText).font(.callout).foregroundStyle(.secondary).lineLimit(1)
         }
         .accessibilityElement(children: .combine)
-    }
-
-    /// The testing state once the build reached testers; before that, how its cloud build is going.
-    private var text: String {
-        if let testing = store.testing { return testing }
-        switch store.cloudState {
-        case .running: return "Building in the cloud"
-        case .failed: return "Cloud build failed"
-        case .succeeded: return "Built"
-        case nil: return ""
-        }
     }
 }
 

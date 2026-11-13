@@ -17,6 +17,7 @@ public final class AppModel {
     public let tests: TestRunModel
     public let queue = QueueModel()
     public let schedule: ScheduleModel
+    public let releaseWatch: ReleaseWatchModel
     public internal(set) var recentProjects: [URL]
     /// Why the last attempt to open a project failed, until the next attempt.
     public internal(set) var openError: String?
@@ -73,6 +74,7 @@ public final class AppModel {
         console = ConsoleModel(service: environment.deviceApps)
         tests = TestRunModel(tester: environment.tester)
         schedule = ScheduleModel(store: store)
+        releaseWatch = ReleaseWatchModel(store: store)
         installRecords = store.installRecords
         launchTexts = store.launchTexts
         recentProjects = store.recentProjects
@@ -81,6 +83,7 @@ public final class AppModel {
         // Last, once every property has its value: the queue and the schedule drive this model.
         queue.app = self
         schedule.app = self
+        releaseWatch.app = self
     }
 
     // MARK: - Projects
@@ -115,6 +118,7 @@ public final class AppModel {
             // A project that names release commands in its settings file gets a Release mode.
             mode = .build
             release = model.snapshot?.releaseProvider.map { ReleaseModel(provider: $0, client: environment.releases) }
+            releaseWatch.restart()
             await reloadInsight(for: container)
         } catch {
             openError = userMessage(for: error)
@@ -136,6 +140,7 @@ public final class AppModel {
         project = nil
         release = nil
         mode = .build
+        releaseWatch.restart()
     }
 
     /// Called when the user has read the message about a failed open.

@@ -347,10 +347,12 @@ enum FolderPicker {
 /// The app's settings: the daily build of the pins.
 public struct SettingsView: View {
     @Bindable var schedule: ScheduleModel
+    @Bindable var releaseWatch: ReleaseWatchModel
     let pinCount: Int
 
     public init(app: AppModel) {
         schedule = app.schedule
+        releaseWatch = app.releaseWatch
         pinCount = app.pins.count
     }
 
@@ -377,6 +379,7 @@ public struct SettingsView: View {
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            ReleaseWatchSettings(watch: releaseWatch)
         }
         .formStyle(.grouped)
         .frame(width: Layout.settingsWidth)
