@@ -15,7 +15,7 @@ file for teams, a release script, run history with a new-warning diff, a build f
 | Build, install, launch, console, uninstall on a simulator | Works; tried on a temporary simulator. |
 | Install last build, install a `.app` file, console on a device | Works; tried on a wired iPhone. |
 | Main window and menu bar popover | Built and checked from rendered images; not yet used by hand. |
-| Signed, notarized release | Works. 0.19.2 was signed with the Developer ID, accepted by Apple's notary service and stapled; unzipped with a download's quarantine flag it is "accepted, source=Notarized Developer ID", its ticket validates offline and it runs. The zip is not published anywhere yet. |
+| Signed, notarized release | Works. 0.19.3 is universal (Apple Silicon and Intel), signed with the Developer ID, accepted by Apple's notary service and stapled; unzipped with a download's quarantine flag it is "accepted, source=Notarized Developer ID", its ticket validates offline and both slices run. The zip is not published anywhere yet. |
 
 ## 1. Remaining things
 
@@ -26,7 +26,7 @@ Work that finishes what exists. None of it is new functionality.
 | Item | Why it is open | Who |
 |---|---|---|
 | Use the app by hand once | Every screen was checked from images and tests, never by clicking. Press Build and Install, run a pin from the menu bar, see a notification arrive, drop an app file on the window. | Any developer |
-| Publish the first release | 0.19.2 is built, signed and notarized in `dist/`. `./Scripts/release.sh` prints the `gh release create` line that publishes it; publishing puts the app where teammates can download it. | Repository owner |
+| Publish the first release | 0.19.3 is built, universal, signed and notarized in `dist/`. `./Scripts/release.sh` prints the `gh release create` line that publishes it; publishing puts the app where teammates can download it. | Repository owner |
 | Move the repository to the organisation | It is under a personal account today; a team tool should be where the team already has access. | Repository owner |
 | Check in the project's `.builddesk.json` | The settings file for the first project that uses Build Desk exists but is not committed there. | That project's owner |
 

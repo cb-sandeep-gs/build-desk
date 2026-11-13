@@ -2,6 +2,9 @@
 # Builds BuildDesk.app from the SwiftPM executable: ./Scripts/build-app.sh [debug|release] [output-directory]
 # Output: <output-directory>/BuildDesk.app, by default .build/BuildDesk.app (ad-hoc signed for local use;
 # Scripts/release.sh signs it with a Developer ID elsewhere, so a release never replaces the copy being used).
+#
+# BUILDDESK_UNIVERSAL=1 builds for both Apple Silicon and Intel. Scripts/release.sh sets it, because a zip sent
+# to other people must run on every Mac; a build for this Mac alone leaves it off and is quicker.
 set -euo pipefail
 
 CONFIGURATION="${1:-release}"
@@ -14,9 +17,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # One version for the app and the tools, read from the constant the code uses.
 VERSION="$(sed -n 's/.*static let version = "\(.*\)".*/\1/p' "$ROOT/Sources/BuildDeskCore/BuildDeskConstants.swift")"
 
+# A build for this Mac alone follows the host's architecture, which is what `swift build` does on its own.
+# (bash 3.2, which macOS ships, treats an empty array as unset under `set -u`, hence the plain string.)
+ARCHS=""
+[ -z "${BUILDDESK_UNIVERSAL:-}" ] || ARCHS="--arch arm64 --arch x86_64"
+
 cd "$ROOT"
-swift build -c "$CONFIGURATION" --product "$PRODUCT"
-BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
+swift build -c "$CONFIGURATION" $ARCHS --product "$PRODUCT"
+BIN_DIR="$(swift build -c "$CONFIGURATION" $ARCHS --show-bin-path)"
 
 APP="${OUTPUT_DIR:-$ROOT/.build}/$APP_NAME.app"
 rm -rf "$APP"
@@ -47,4 +55,4 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 codesign --force --sign - "$APP" >/dev/null
-echo "Built $APP ($VERSION, $CONFIGURATION)"
+echo "Built $APP ($VERSION, $CONFIGURATION, $(lipo -archs "$APP/Contents/MacOS/$APP_NAME"))"

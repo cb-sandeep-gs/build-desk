@@ -64,7 +64,8 @@ if [ "$MODE" != "$ADHOC_FLAG" ]; then
 fi
 
 mkdir -p "$STAGE"
-"$ROOT/Scripts/build-app.sh" release "$STAGE"
+# Everyone's Mac, not just this one: the zip holds both Apple Silicon and Intel code.
+BUILDDESK_UNIVERSAL=1 "$ROOT/Scripts/build-app.sh" release "$STAGE"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 ZIP="$DIST/$APP_NAME-$VERSION.zip"
 mkdir -p "$DIST"
@@ -85,6 +86,11 @@ fi
 
 
 # The hardened runtime and a secure timestamp are both required for notarization.
+ARCHS_BUILT="$(lipo -archs "$APP/Contents/MacOS/$APP_NAME")"
+for arch in arm64 x86_64; do
+  echo "$ARCHS_BUILT" | grep -qw "$arch" || fail "the build is missing $arch; a release must run on every Mac (got: $ARCHS_BUILT)."
+done
+
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

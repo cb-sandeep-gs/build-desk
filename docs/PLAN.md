@@ -206,7 +206,7 @@ warning which is fixed and later comes back is not flagged as new.
 |---|---|---|
 | Project settings | `ProjectConfig`, `ProjectConfigLoader` | `.builddesk.json` beside the project or above it up to the repository root: favorite schemes, hidden schemes (with `*`), default scheme and configuration. A broken file is reported in the sidebar and never stops a project from opening. Schema in `docs/builddesk.schema.json`. |
 | Device checks | `DeviceIssue`, `DeviceDiscovery.isLocked` | Each device that can't be used says why (not connected, not trusted, Developer Mode off) with the fix. A locked device is a hint, not a blocker, because the install still works. |
-| Release | `Scripts/release.sh` | Developer ID signing with the hardened runtime, notarization, stapling and a zip in `dist/`; `--adhoc` for a zip without a Developer ID. It finds the certificate in the keychain, checks the notarization credentials before building, and builds inside `dist` so a release never replaces the copy being used. |
+| Release | `Scripts/release.sh` | A universal build (Apple Silicon and Intel), Developer ID signing with the hardened runtime, notarization, stapling and a zip in `dist/`; `--adhoc` for a zip without a Developer ID. It finds the certificate in the keychain, checks the notarization credentials before building, refuses to ship a build that is missing an architecture, and builds inside `dist` so a release never replaces the copy being used. |
 | Closed gaps | — | A scheme named after its test target is listed under Tests. Projects inside workspace groups are found. Simulator versions read correctly for model-specific runtimes. |
 
 Tried on a temporary simulator with the real tools: build, install and launch (259 s), the console, install
@@ -221,11 +221,13 @@ Known gaps:
   connected and no `.ipa` was at hand.
 - **Uninstall on a real device** was not run, to keep the data of the app on the test device; it was run for real
   on a simulator. The tool reports success when asked to remove an app that is not installed, so Build Desk does too.
-- **A release has been made but not published.** 0.19.2 went through `Scripts/release.sh` for real: signed with
-  the Developer ID (hardened runtime, secure timestamp), accepted by Apple's notary service, stapled and zipped
-  to `dist/BuildDesk-0.19.2.zip` (2.0 MB). Unzipped elsewhere with a download's quarantine flag, Gatekeeper says
-  "accepted, source=Notarized Developer ID", `stapler validate` passes, so it opens on a Mac that is offline, and
-  the app runs from that copy. Nothing is published yet, so teammates still have no link to download.
+- **A release has been made but not published.** 0.19.3 went through `Scripts/release.sh` for real: built for
+  both Apple Silicon and Intel, signed with the Developer ID (hardened runtime, secure timestamp), accepted by
+  Apple's notary service, stapled and zipped to `dist/BuildDesk-0.19.3.zip` (3.8 MB). Unzipped elsewhere with a
+  download's quarantine flag, Gatekeeper says "accepted, source=Notarized Developer ID" and `stapler validate`
+  passes, so it opens on a Mac that is offline. Both slices were run from that copy: the Intel one under Rosetta,
+  the Apple Silicon one directly, each rendering the same window. Nothing is published yet, so teammates still
+  have no link to download.
 - **Device checks for "not trusted" and "Developer Mode off"** are covered by tests on made-up tool output; no
   device in that state was at hand. The lock check was read from a real, unlocked device.
 - **An iOS version newer than the installed Xcode supports** is not detected; the build fails with Xcode's own message.
