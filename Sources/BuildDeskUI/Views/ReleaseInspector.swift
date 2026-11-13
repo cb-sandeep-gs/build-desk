@@ -10,6 +10,8 @@ struct ReleaseInspector: View {
     /// Asks for the build-and-install confirmation.
     let install: () -> Void
 
+    @State private var showsAllNotes = false
+
     private var store: ReleaseStoreBuild? { release.storeBuild(for: build) }
 
     var body: some View {
@@ -17,7 +19,7 @@ struct ReleaseInspector: View {
             VStack(alignment: .leading, spacing: Layout.spacing) {
                 title
                 facts
-                if let notes = build.notes, !notes.isEmpty { notesBox(notes) }
+                if let notes = release.notes(of: build), !notes.isEmpty { notesBox(notes) }
                 Divider()
                 actions
             }
@@ -25,6 +27,8 @@ struct ReleaseInspector: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(.background.secondary)
+        // The status has only a build's first line of notes; the rest is read when the build is opened.
+        .task(id: build.id) { await release.loadDetails(of: build) }
         .accessibilityIdentifier(AccessibilityID.releaseInspector)
     }
 
@@ -70,11 +74,17 @@ struct ReleaseInspector: View {
     private func notesBox(_ notes: String) -> some View {
         VStack(alignment: .leading, spacing: Layout.spacingSmall / 2) {
             Text("Notes").font(.callout).foregroundStyle(.secondary)
+            // A build's full notes can be a page long; the actions below must stay in reach.
             Text(notes).font(.callout).textSelection(.enabled)
+                .lineLimit(showsAllNotes ? nil : Layout.inspectorNotesLines)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(Layout.spacingSmall + 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
+            if notes.split(whereSeparator: \.isNewline).count > Layout.inspectorNotesLines {
+                Button(showsAllNotes ? "Show Less" : "Show All") { showsAllNotes.toggle() }
+                    .buttonStyle(.link).font(.callout)
+            }
         }
     }
 

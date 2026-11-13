@@ -159,6 +159,20 @@ Build Desk reads it.
 
 These work on a build that already exists. A provider that has none of them is still complete.
 
+### `build`
+
+Named as `"build"`. Build Desk appends `--app <id> --build <id>`. The provider prints one build in full.
+Read-only.
+
+```json
+{"contract": 1, "id": "ShopInternal-4.2.3", "notes": "Changes in this build\n- Faster search",
+ "testerNotes": "Please try the cart with a discount code."}
+```
+
+`notes` are the build's own notes in full (the status carries only their first line). `testerNotes` are what
+testers see for the build now, or null when there are none or the store is not connected. Build Desk shows the
+notes in the inspector and starts an edit of the tester notes from `testerNotes`, else from `notes`.
+
 ### `artifact`
 
 Named as `"artifact"` in the `release` section. Build Desk appends `--app <id> --build <id> --output <folder>`.

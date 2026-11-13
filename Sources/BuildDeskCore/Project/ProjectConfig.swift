@@ -83,10 +83,12 @@ public struct ReleaseCommands: Sendable, Equatable, Codable {
     public var store: [String]?
     /// Saves a build's installable file to a folder and prints where it is.
     public var artifact: [String]?
+    /// Prints one build in full: its notes, and the notes testers see for it now.
+    public var build: [String]?
 
     public init(
         status: [String], plan: [String]? = nil, run: [String]? = nil, checks: [String]? = nil, store: [String]? = nil,
-        artifact: [String]? = nil
+        artifact: [String]? = nil, build: [String]? = nil
     ) {
         self.status = status
         self.plan = plan
@@ -94,6 +96,7 @@ public struct ReleaseCommands: Sendable, Equatable, Codable {
         self.checks = checks
         self.store = store
         self.artifact = artifact
+        self.build = build
     }
 }
 

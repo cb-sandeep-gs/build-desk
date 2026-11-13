@@ -44,6 +44,16 @@ struct FakeReleases: ReleaseProviding {
         return try artifactResult.value.get()
     }
 
+    let detailsResult = Locked<Result<ReleaseBuildDetails, BuildDeskError>>(
+        .success(ReleaseBuildDetails(id: "SampleInternal-4.2.3", notes: "All the notes", testerNotes: "Try the cart"))
+    )
+    let detailsCalls = Locked(0)
+
+    func details(of build: ReleaseBuild, _ provider: ReleaseProvider) async throws -> ReleaseBuildDetails {
+        detailsCalls.value += 1
+        return try detailsResult.value.get()
+    }
+
     func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {
         try checksResult.value.get()
     }

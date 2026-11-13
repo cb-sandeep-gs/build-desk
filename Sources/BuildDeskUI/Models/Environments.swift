@@ -200,7 +200,7 @@ public enum Demo {
                 favoriteSchemes: ["Harbor", "Harbor Staging"], hiddenSchemes: ["*Tests"],
                 release: ReleaseCommands(
                     status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"], checks: ["./tool", "checks"],
-                    store: ["./tool", "store"], artifact: ["./tool", "artifact"]
+                    store: ["./tool", "store"], artifact: ["./tool", "artifact"], build: ["./tool", "build"]
                 )
             ),
             configFolder: URL(fileURLWithPath: "/Projects/Harbor")

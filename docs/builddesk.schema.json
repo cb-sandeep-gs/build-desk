@@ -82,6 +82,14 @@
           },
           "minItems": 1,
           "description": "Saves a build's installable file to a folder and prints where it is."
+        },
+        "build": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Prints one build in full: its notes, and the notes testers see for it now. Read-only."
         }
       }
     }

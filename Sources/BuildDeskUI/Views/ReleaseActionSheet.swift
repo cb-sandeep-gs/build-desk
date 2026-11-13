@@ -64,6 +64,12 @@ public struct ReleaseActionSheet: View {
                         .frame(height: Layout.planNotesHeight)
                         .overlay(RoundedRectangle(cornerRadius: Layout.cornerRadius).stroke(.quaternary))
                 }
+                if model.isLoadingNotes {
+                    HStack(spacing: Layout.spacingSmall) {
+                        ProgressView().controlSize(.small)
+                        Text("Reading the notes testers see now…").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
             case .testers:
                 Text("The project decides which tester group this kind of build goes to. The plan below names it.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

@@ -12,6 +12,8 @@ public protocol ReleaseProviding: Sendable {
     func store(_ provider: ReleaseProvider) async throws -> ReleaseStoreStatus
     /// Saves a build's installable file into `folder`. Changes nothing on the store's side.
     func artifact(of build: ReleaseBuild, to folder: URL, _ provider: ReleaseProvider) async throws -> ReleaseArtifact
+    /// One build in full. Read-only.
+    func details(of build: ReleaseBuild, _ provider: ReleaseProvider) async throws -> ReleaseBuildDetails
     /// Runs the project's go or no-go gates. Read-only; can take minutes.
     func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks
 }
@@ -89,6 +91,14 @@ public struct ReleaseClient: ReleaseProviding {
         let artifact: ReleaseArtifact = try await answer(of: command, arguments, provider, name: "artifact")
         try Self.checkVersion(artifact.contract)
         return artifact
+    }
+
+    public func details(of build: ReleaseBuild, _ provider: ReleaseProvider) async throws -> ReleaseBuildDetails {
+        guard let command = provider.commands.build else { throw BuildDeskError.releaseCommandMissing(name: "build") }
+        let arguments = [Flag.app, build.app, Flag.build, build.id]
+        let details: ReleaseBuildDetails = try await answer(of: command, arguments, provider, name: "build")
+        try Self.checkVersion(details.contract)
+        return details
     }
 
     public func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {

@@ -15,6 +15,8 @@ public enum Layout {
     static let detailMaxWidth: CGFloat = 980
     static let toolbarStatusWidth: CGFloat = 300
     static let inspectorWidth: CGFloat = 290
+    /// Lines of a build's notes shown before Show All.
+    static let inspectorNotesLines = 6
     static let tableVersionWidth: CGFloat = 78
     static let tableTrackWidth: CGFloat = 150
     static let tableTrackMinWidth: CGFloat = 70

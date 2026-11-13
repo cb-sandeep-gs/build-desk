@@ -40,6 +40,8 @@ public final class ReleaseModel {
     public internal(set) var download: ReleaseDownload?
     /// The project's go or no-go gates, once they were run.
     public internal(set) var checks: LoadState<ReleaseChecks> = .idle
+    /// Builds read in full, by id, so each is asked for once.
+    public internal(set) var details: [String: ReleaseBuildDetails] = [:]
     /// True while the checks sheet is open.
     public var showsChecks = false
 
@@ -134,6 +136,7 @@ public final class ReleaseModel {
     /// Closes the action. After one that ran, the status is read again to show the new build.
     public func endAction() async {
         let ran = activeAction?.isDone == true
+        if ran, let edited = activeAction?.build { forgetDetails(of: edited.id) }
         activeAction = nil
         if ran { await refresh() }
     }

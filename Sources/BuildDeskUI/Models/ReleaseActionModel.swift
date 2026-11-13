@@ -28,6 +28,8 @@ public final class ReleaseActionModel {
     public private(set) var runState: ReleaseRunState = .idle
 
     public let app: ReleaseApp
+    /// True while the build's current notes are being read, to start the edit from them.
+    public internal(set) var isLoadingNotes = false
     /// For an action on an existing build: that build.
     public private(set) var build: ReleaseBuild?
     /// Test builds of the app that a store release can be made from, newest first.

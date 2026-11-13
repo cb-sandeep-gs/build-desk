@@ -19,6 +19,23 @@ public struct ReleaseArtifact: Sendable, Equatable, Codable {
     public var url: URL { URL(fileURLWithPath: file) }
 }
 
+/// One build in full: the answer of the `build` command.
+public struct ReleaseBuildDetails: Sendable, Equatable, Codable {
+    public let contract: Int
+    public let id: String
+    /// The build's full notes, as written when it was made.
+    public let notes: String?
+    /// The notes testers see for the build now; nil when there are none or the store is not connected.
+    public let testerNotes: String?
+
+    public init(contract: Int = ReleaseContract.version, id: String, notes: String? = nil, testerNotes: String? = nil) {
+        self.contract = contract
+        self.id = id
+        self.notes = notes
+        self.testerNotes = testerNotes
+    }
+}
+
 /// The project's go or no-go before a release: the answer of the `checks` command.
 public struct ReleaseChecks: Sendable, Equatable, Codable {
     public let contract: Int

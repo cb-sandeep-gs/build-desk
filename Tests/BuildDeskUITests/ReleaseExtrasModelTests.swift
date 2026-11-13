@@ -8,7 +8,7 @@ final class ReleaseExtrasModelTests: XCTestCase {
     private let full = ReleaseProvider(
         commands: ReleaseCommands(
             status: ["./tool", "status"], plan: ["./tool", "plan"], run: ["./tool", "run"], checks: ["./tool", "checks"],
-            store: ["./tool", "store"], artifact: ["./tool", "artifact"]
+            store: ["./tool", "store"], artifact: ["./tool", "artifact"], build: ["./tool", "build"]
         ),
         folder: URL(fileURLWithPath: "/projects")
     )
@@ -56,6 +56,13 @@ final class ReleaseExtrasModelTests: XCTestCase {
         release.begin(.notes, for: Sample.internalBuild)
         let action = try XCTUnwrap(release.activeAction)
         XCTAssertEqual(action.title, "What to test in 4.2.3")
+        // The editor starts from what testers see now.
+        await waitUntil { action.action.notes != nil }
+        XCTAssertEqual(action.action.notes, "Try the cart")
+        XCTAssertFalse(action.isLoadingNotes)
+        XCTAssertNil(action.problem)
+
+        action.action.notes = "  "
         XCTAssertEqual(action.problem, "Write what testers should look at in this build.")
         await action.preview()
         XCTAssertEqual(releases.planned.value, [])
@@ -70,6 +77,38 @@ final class ReleaseExtrasModelTests: XCTestCase {
 
         await action.confirm()
         XCTAssertEqual(releases.ran.value.count, 1)
+    }
+
+    func testTheEditStartsFromTheBuildsOwnNotesWhenTestersHaveNoneAndNeverOverwritesTyping() async throws {
+        let release = await makeRelease()
+        releases.detailsResult.value = .success(ReleaseBuildDetails(id: "SampleInternal-4.2.3", notes: "All the notes"))
+        release.begin(.notes, for: Sample.internalBuild)
+        let action = try XCTUnwrap(release.activeAction)
+        await waitUntil { action.action.notes != nil }
+        XCTAssertEqual(action.action.notes, "All the notes")
+        await release.endAction()
+
+        // Typing before the notes arrive wins.
+        release.begin(.notes, for: Sample.internalBuild)
+        let second = try XCTUnwrap(release.activeAction)
+        second.action.notes = "Mine"
+        await release.prefillNotes(of: Sample.internalBuild, in: second)
+        XCTAssertEqual(second.action.notes, "Mine")
+    }
+
+    func testABuildIsReadInFullOnceAndAFailureKeepsTheFirstLine() async {
+        let release = await makeRelease()
+        XCTAssertEqual(release.notes(of: Sample.internalBuild), "Faster search")
+
+        await release.loadDetails(of: Sample.internalBuild)
+        await release.loadDetails(of: Sample.internalBuild)
+        XCTAssertEqual(releases.detailsCalls.value, 1)
+        XCTAssertEqual(release.notes(of: Sample.internalBuild), "All the notes")
+
+        releases.detailsResult.value = .failure(.releaseFailed(message: "No network."))
+        let other = await release.loadDetails(of: Sample.otherAppBuild)
+        XCTAssertNil(other)
+        XCTAssertNil(release.notes(of: Sample.otherAppBuild))
     }
 
     func testAddingToTestersShowsItsPlanAtOnceAndWritesOnlyOnConfirm() async throws {

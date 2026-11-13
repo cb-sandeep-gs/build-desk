@@ -181,6 +181,7 @@ the window by hand, and a real device (installing an older version over the app 
 |---|---|---|
 | App file | `artifact` command, `ReleaseClient.artifact`, `ReleaseModel.downloadArtifact` | The inspector's Download App File saves the file the cloud build made (for the first provider: the ad hoc `.ipa`) into Downloads, then offers Show in Finder and Install, which goes through the same sheet as a dropped app file. |
 | Notes and testers | `ReleaseAction.Kind.notes` / `.testers`, `ReleaseModel.begin(_:for:)` | Edit What to Test and Add to Testers in the inspector, for builds the store knows. They use the plan-then-confirm sheet: the plan names the build number and the group before anything is written. |
+| A build in full | `build` command, `ReleaseBuildDetails`, `ReleaseModel.loadDetails` | Opening a build reads its full notes for the inspector (six lines, then Show All). Edit What to Test starts from the notes testers see now, read fresh, else from the build's own notes; typing that began earlier is never overwritten. |
 | Checks | `checks` command, `ReleaseChecks`, `ReleaseChecksSheet` | Check in the Release page runs the project's gates and shows go or no-go with each gate, advisory ones marked. |
 | Command line | `builddesk release file`, `builddesk release check` | The same from a terminal. |
 

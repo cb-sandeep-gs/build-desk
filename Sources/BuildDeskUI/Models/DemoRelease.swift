@@ -74,6 +74,14 @@ struct DemoRelease: ReleaseProviding {
         ReleaseArtifact(file: folder.appendingPathComponent("\(build.id)-ad-hoc.ipa").path, kind: "ad-hoc", bytes: 61_000_000)
     }
 
+    func details(of build: ReleaseBuild, _ provider: ReleaseProvider) async throws -> ReleaseBuildDetails {
+        let lines = [
+            "Changes in this build", "- \(build.notes ?? "Fixes")", "- Smaller images on the product page", "- Fix a crash on an empty cart",
+        ]
+        let notes = lines.joined(separator: "\n")
+        return ReleaseBuildDetails(id: build.id, notes: notes, testerNotes: "Please try the cart with a discount code.")
+    }
+
     func checks(_ provider: ReleaseProvider) async throws -> ReleaseChecks {
         ReleaseChecks(
             isGo: false,
