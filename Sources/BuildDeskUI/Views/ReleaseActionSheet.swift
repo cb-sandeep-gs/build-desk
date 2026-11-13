@@ -30,29 +30,27 @@ public struct ReleaseActionSheet: View {
 
     // MARK: - Inputs
 
+    /// One column, each field under its label and as wide as the sheet: a long branch name is cut
+    /// in the middle instead of pushing the sheet's content out of view.
     @ViewBuilder private var inputs: some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Layout.spacing, verticalSpacing: Layout.spacing) {
+        VStack(alignment: .leading, spacing: Layout.spacing) {
             switch model.action.kind {
             case .testflight:
-                GridRow {
-                    label("Track")
+                field("Track") {
                     Picker("Track", selection: $model.action.track) {
                         ForEach(model.app.tracks) { Text($0.name).tag(Optional($0.id)) }
                     }
-                    .pickerStyle(.segmented).labelsHidden().fixedSize()
+                    .pickerStyle(.segmented)
                 }
-                GridRow {
-                    label("Branch")
-                    Picker("Branch", selection: $model.action.branch) {
+                field("From") {
+                    Picker("From", selection: $model.action.branch) {
                         Text(model.checkoutBranch.map { "This checkout (\($0))" } ?? "This checkout").tag(String?.none)
                         if !model.branches.isEmpty { Divider() }
                         ForEach(model.branches, id: \.self) { Text($0).tag(Optional($0)) }
                     }
-                    .labelsHidden().fixedSize()
                 }
                 if model.needsWrittenNotes {
-                    GridRow {
-                        label("Notes")
+                    field("Notes for testers") {
                         TextEditor(text: Binding(get: { model.action.notes ?? "" }, set: { model.action.notes = $0 }))
                             .font(.body)
                             .frame(height: Layout.notesEditorHeight)
@@ -60,23 +58,24 @@ public struct ReleaseActionSheet: View {
                     }
                 }
             case .store:
-                GridRow {
-                    label("Shipped build")
+                field("Shipped build") {
                     Picker("Shipped build", selection: $model.action.from) {
                         ForEach(model.shippedCandidates) { Text($0.version).tag(Optional($0.id)) }
                     }
-                    .labelsHidden().fixedSize()
                 }
             }
         }
         .disabled(model.runState == .running)
         if let problem = model.problem {
-            Text(problem).font(.callout).foregroundStyle(.secondary)
+            Text(problem).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private func label(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary).frame(width: Layout.pickerLabelWidth, alignment: .leading)
+    private func field(_ label: String, @ViewBuilder control: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: Layout.spacingSmall / 2) {
+            Text(label).font(.callout).foregroundStyle(.secondary)
+            control().labelsHidden().frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     // MARK: - Plan
@@ -85,7 +84,7 @@ public struct ReleaseActionSheet: View {
         switch model.plan {
         case .idle:
             Text("Preview shows what will happen. Nothing is changed until you confirm it.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         case .loading:
             HStack(spacing: Layout.spacingSmall) {
                 ProgressView().controlSize(.small)
@@ -94,6 +93,7 @@ public struct ReleaseActionSheet: View {
             }
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red).textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
         case .loaded(let plan):
             PlanView(plan: plan)
         }
@@ -126,7 +126,7 @@ public struct ReleaseActionSheet: View {
                 Button("Cancel", action: close).keyboardShortcut(.cancelAction).disabled(model.runState == .running)
                 if let plan = model.plan.value {
                     // The button names what it will create, so the last click is never a blind one.
-                    Button("Confirm: \(plan.title)") { Task { await model.confirm() } }
+                    Button("Create \(plan.title)") { Task { await model.confirm() } }
                         .buttonStyle(.borderedProminent)
                         .disabled(!model.canConfirm)
                         .accessibilityIdentifier(AccessibilityID.releaseConfirm)
@@ -150,7 +150,8 @@ private struct PlanView: View {
             ForEach(Array(plan.steps.enumerated()), id: \.offset) { index, step in
                 HStack(alignment: .firstTextBaseline, spacing: Layout.spacingSmall) {
                     Text("\(index + 1).").foregroundStyle(.secondary).monospacedDigit()
-                    Text(step).textSelection(.enabled)
+                    // The whole step, however long the name in it is: this is what gets confirmed.
+                    Text(step).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                 }
             }
             ForEach(plan.warnings ?? [], id: \.self) { warning in
