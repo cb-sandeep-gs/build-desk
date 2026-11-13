@@ -44,6 +44,10 @@ struct NewWarningsView: View {
 /// Past runs of the selected scheme: a build-time trend and the latest runs.
 struct HistoryView: View {
     let records: [RunRecord]
+    var title = "Recent runs"
+    var rowLimit = Layout.historyRowCount
+    /// Name the scheme on each row, for a list that mixes schemes.
+    var showsScheme = false
 
     /// Successful builds, oldest first, for the trend.
     private var builds: [(index: Int, record: RunRecord)] {
@@ -54,12 +58,12 @@ struct HistoryView: View {
     var body: some View {
         if !records.isEmpty {
             VStack(alignment: .leading, spacing: Layout.spacingSmall) {
-                Text("History").font(.headline)
+                SectionTitle(title)
                 if builds.count > 1 { trend }
                 VStack(spacing: 0) {
-                    ForEach(Array(records.prefix(Layout.historyRowCount).enumerated()), id: \.element.id) { index, record in
+                    ForEach(Array(records.prefix(rowLimit).enumerated()), id: \.element.id) { index, record in
                         if index > 0 { Divider() }
-                        HistoryRow(record: record)
+                        HistoryRow(record: record, showsScheme: showsScheme)
                     }
                 }
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
@@ -89,12 +93,14 @@ struct HistoryView: View {
 
 private struct HistoryRow: View {
     let record: RunRecord
+    let showsScheme: Bool
 
     var body: some View {
         HStack(spacing: Layout.spacing) {
             Image(systemName: symbol).foregroundStyle(color).frame(width: Layout.iconColumnWidth)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(title) · \(record.configuration) · \(record.deviceName)").lineLimit(1).truncationMode(.middle)
+                Text("\(showsScheme ? "\(record.scheme) · " : "")\(title) · \(record.configuration) · \(record.deviceName)")
+                    .lineLimit(1).truncationMode(.middle)
                 HStack(spacing: Layout.spacingSmall) {
                     Text(record.date.formatted(.relative(presentation: .named)))
                     if let source = record.source {
@@ -159,7 +165,7 @@ struct BuildFolderView: View {
     var body: some View {
         if let folder = app.buildFolder {
             VStack(alignment: .leading, spacing: Layout.spacingSmall) {
-                Text("Build folder").font(.headline)
+                SectionTitle("Build folder")
                 HStack(spacing: Layout.spacing) {
                     Image(systemName: "internaldrive").frame(width: Layout.iconColumnWidth)
                     VStack(alignment: .leading, spacing: 2) {

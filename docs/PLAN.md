@@ -109,6 +109,23 @@ now stops whatever it was running, so no build or console session is left behind
 Tried on a wired iPhone with the real tools: build and install (217 s), install last build (9 s), install the
 built `.app` as a file (4 s), and the console (about 1,000 lines in 20 s, and nothing left running after a stop).
 
+## The 0.18 redesign
+
+The window was rebuilt on 2026-11-13 after a review of the running app: sheets clipped their labels, half of a
+wide window was empty, the window changed shape between Build and Release, and the builds were one long flat list.
+
+| Part | Where | What changed |
+|---|---|---|
+| One shape | `ProjectView`, `SchemeListView`, `SidebarItem`, `AppModel.sidebarSelection` | One sidebar for every page: schemes, the release apps with their versions, and Activity. The Build / Release switch is gone; choosing a row moves the window and each section remembers its selection. |
+| Toolbar | `ToolbarDevicePicker`, `ToolbarConfigurationPicker`, `ToolbarStatusView`, `ToolbarRunButton`, `AppModel.toolbarStatus` | Device, configuration and Run are in the toolbar on every page. The status field shows the work in progress with its progress, else how the last run ended, else where the release stands. |
+| Release page | `ReleaseView`, `ReleaseModel+Table`, `ReleaseInspector` | Stages across the top (in code, each track, the store), filters (all, per track, failed), builds grouped by app version with the store's version marked, and the selected build in an inspector with its facts, notes and actions. |
+| Build page | `SchemeDetailView`, `StatCard` | Actions first, then three facts (what is on the device, the last build, the build files with Clean), the run, recent runs, and the targets behind a disclosure. Content is centered up to a readable width. |
+| Activity | `ActivityView` | Every run of the project across schemes, and the build folder and tagged-build files with the ways to free them. |
+| Sheets | `ReleaseActionSheet` | One column with labels above full-width fields; plan steps wrap; the button reads Create and the name. |
+
+Checked from rendered snapshots of the demo and of a real project in light and dark, and by tests of the
+navigation, the grouping and filters, and the status field. Not yet clicked through by hand.
+
 ## What BD-10 built
 
 | Part | Types | What it does |

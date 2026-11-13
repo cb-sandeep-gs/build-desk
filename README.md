@@ -53,8 +53,15 @@ particular screen. Each scheme remembers its own, and a pin keeps the options it
 tests on the selected device or simulator and lists the failures first, each with its reason and `file:line`.
 **Re-run Failed** runs only what failed; right-click a test or a class to run just that.
 
-**Release mode.** For a project whose `.builddesk.json` names release commands, a **Build / Release** switch
-appears in the toolbar. Release shows each app's version in code, what is on the store, the latest build per
+**The window.** A sidebar lists the schemes, the apps of the release workflow and the Activity page; it is the
+same on every page. The toolbar holds the device, the configuration, a status field (the work in progress, how
+the last run ended, or where the release stands) and Run. Activity lists every run of the project and the files
+kept on disk for it.
+
+**Release.** For a project whose `.builddesk.json` names release commands, each app it ships is listed under
+Release in the sidebar. An app's page shows its stages (in code, each line of test builds, the store), then its
+builds as a table grouped by version, with filters per track and for failed cloud builds. Selecting a build
+opens it in an inspector beside the table, with its details, notes and actions. Release shows each app's version in code, what is on the store, the latest build per
 track and the recent builds, all read through the project's own commands. **New Test Build** and **Store
 Release** open a sheet that first shows what will happen (the steps and the notes); nothing is tagged or pushed
 until you press the confirm button, which names what it will create. When the project also has a store

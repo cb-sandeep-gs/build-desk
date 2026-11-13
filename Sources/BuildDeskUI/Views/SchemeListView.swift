@@ -1,8 +1,10 @@
 import BuildDeskCore
 import SwiftUI
 
-/// The sidebar: every scheme, grouped by what can be done with it.
+/// The sidebar: every scheme grouped by what can be done with it, then the apps of the release
+/// workflow and the activity page. It is the same on every page, so the window keeps its shape.
 struct SchemeListView: View {
+    @Bindable var app: AppModel
     @Bindable var project: ProjectModel
 
     var body: some View {
@@ -27,14 +29,20 @@ struct SchemeListView: View {
     }
 
     private var list: some View {
-        List(selection: $project.selectedSchemeName) {
+        List(selection: $app.sidebarSelection) {
             ForEach(project.groups) { group in
                 Section(group.title) {
                     ForEach(group.schemes) { scheme in
                         SchemeRow(scheme: scheme, platform: project.snapshot?.platform(of: scheme))
-                            .tag(Optional(scheme.name))
+                            .tag(Optional(SidebarItem.scheme(scheme.name)))
                     }
                 }
+            }
+            if app.release != nil { releaseSection }
+            Section("Activity") {
+                Label("Runs and storage", systemImage: "clock.arrow.circlepath")
+                    .badge(Text(app.storageBytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? ""))
+                    .tag(Optional(SidebarItem.activity))
             }
         }
         .searchable(text: $project.filter, placement: .sidebar, prompt: "Filter schemes")
@@ -53,6 +61,25 @@ struct SchemeListView: View {
             }
         }
         .accessibilityIdentifier(AccessibilityID.schemeList)
+    }
+
+    /// One row per app the project ships, with its version; a spinner until the status is read.
+    @ViewBuilder private var releaseSection: some View {
+        Section("Release") {
+            if app.releaseApps.isEmpty {
+                switch app.release?.state {
+                case .failed(let message):
+                    Label("Couldn't read the status", systemImage: "exclamationmark.triangle").foregroundStyle(.secondary).help(message)
+                default:
+                    Label("Reading the status…", systemImage: "shippingbox").foregroundStyle(.secondary)
+                }
+            }
+            ForEach(app.releaseApps) { releaseApp in
+                Label(releaseApp.name, systemImage: "shippingbox")
+                    .badge(Text(releaseApp.version))
+                    .tag(Optional(SidebarItem.releaseApp(releaseApp.id)))
+            }
+        }
     }
 
     /// Swift package schemes have no scheme file; listing them needs `xcodebuild`, which is slow,

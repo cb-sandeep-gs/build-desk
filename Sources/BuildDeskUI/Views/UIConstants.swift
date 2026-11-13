@@ -3,16 +3,20 @@ import SwiftUI
 
 /// Sizes and spacing used across the window.
 public enum Layout {
-    public static let windowDefaultWidth: CGFloat = 1060
+    public static let windowDefaultWidth: CGFloat = 1180
     public static let windowDefaultHeight: CGFloat = 720
-    public static let windowMinWidth: CGFloat = 760
+    public static let windowMinWidth: CGFloat = 920
     public static let windowMinHeight: CGFloat = 480
 
     static let sidebarMinWidth: CGFloat = 210
     static let sidebarIdealWidth: CGFloat = 250
     static let sidebarMaxWidth: CGFloat = 360
     /// The detail column stops growing here, so lines stay readable on a wide window.
-    static let detailMaxWidth: CGFloat = 820
+    static let detailMaxWidth: CGFloat = 980
+    static let toolbarStatusWidth: CGFloat = 300
+    static let inspectorWidth: CGFloat = 290
+    static let tableVersionWidth: CGFloat = 78
+    static let tableTrackWidth: CGFloat = 150
     static let welcomeWidth: CGFloat = 420
     public static let menuBarWidth: CGFloat = 330
     public static let sheetWidth: CGFloat = 460
@@ -21,7 +25,6 @@ public enum Layout {
     static let consoleFilterWidth: CGFloat = 160
     static let trendHeight: CGFloat = 64
     static let setMarkerSize: CGFloat = 6
-    static let releaseCardMinWidth: CGFloat = 170
     public static let releaseSheetWidth: CGFloat = 520
     static let notesEditorHeight: CGFloat = 90
     static let planNotesHeight: CGFloat = 150
@@ -30,6 +33,7 @@ public enum Layout {
     /// Builds shown in the build-time trend, and runs listed under it.
     static let trendRunCount = 30
     static let historyRowCount = 6
+    static let activityRowCount = 40
 
     static let spacingSmall: CGFloat = 6
     static let spacing: CGFloat = 12
@@ -67,7 +71,6 @@ public enum AccessibilityID {
     public static let testResults = "test-results"
     public static let runAllButton = "run-all-button"
     public static let releaseView = "release-view"
-    public static let modePicker = "mode-picker"
     public static let releaseSheet = "release-sheet"
     public static let newTestBuild = "new-test-build"
     public static let releaseConfirm = "release-confirm"
@@ -75,6 +78,10 @@ public enum AccessibilityID {
     public static let releaseWatchToggle = "release-watch-toggle"
     public static let menuBarReleases = "menu-bar-releases"
     public static let taggedInstall = "tagged-install"
+    public static let toolbarStatus = "toolbar-status"
+    public static let releaseInspector = "release-inspector"
+    public static let releaseTable = "release-table"
+    public static let activityView = "activity-view"
     public static let taggedInstallButton = "tagged-install-button"
     public static let history = "history"
     public static let cleanButton = "clean-button"

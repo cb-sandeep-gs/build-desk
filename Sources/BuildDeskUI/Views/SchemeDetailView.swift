@@ -1,30 +1,40 @@
 import BuildDeskCore
 import SwiftUI
 
-/// The selected scheme: where it goes, what it builds, and the controls to build and install it.
+/// The Build page of the selected scheme: the actions, what is on the device, how the last build
+/// went, the run in progress and the runs before it. The device and the configuration are chosen
+/// in the toolbar.
 struct SchemeDetailView: View {
     @Bindable var app: AppModel
     @Bindable var project: ProjectModel
+    @State private var confirmsClean = false
 
     var body: some View {
         if let scheme = project.selectedScheme {
             ScrollView {
                 VStack(alignment: .leading, spacing: Layout.spacingLarge) {
                     if app.isXcodeOpen { xcodeWarning }
-                    header(scheme)
-                    destination(scheme)
+                    titleRow(scheme)
                     actions(scheme)
+                    facts(scheme)
                     RunProgressView(run: app.run)
                     TestResultsView(app: app)
                     if app.run.phase == .succeeded { NewWarningsView(newWarnings: app.newWarnings) }
                     ConsoleView(console: app.console)
-                    targets(scheme)
                     HistoryView(records: app.historyForSelectedScheme)
-                    BuildFolderView(app: app)
+                    targets(scheme)
                 }
                 .frame(maxWidth: Layout.detailMaxWidth, alignment: .leading)
                 .padding(Layout.spacingLarge)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // Centered, so a wide window has even margins instead of one empty half.
+                .frame(maxWidth: .infinity)
+            }
+            // Deleting build output costs a full rebuild, so it is never done on one click.
+            .confirmationDialog("Delete this project's build output?", isPresented: $confirmsClean) {
+                Button("Clean Build Folder", role: .destructive) { Task { await app.cleanBuildFolder() } }
+            } message: {
+                Text("The next build will be a full one, and Install Last Build will have nothing to install until then. "
+                    + "Downloaded packages and the index are kept.")
             }
         } else {
             ContentUnavailableView(
@@ -44,13 +54,6 @@ struct SchemeDetailView: View {
             .padding(Layout.spacing)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.yellow.opacity(0.18), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
-    }
-
-    private func header(_ scheme: Scheme) -> some View {
-        VStack(alignment: .leading, spacing: Layout.spacingSmall) {
-            titleRow(scheme)
-            if let record = app.lastInstall { LastInstallLine(record: record) }
-        }
     }
 
     private func titleRow(_ scheme: Scheme) -> some View {
@@ -75,75 +78,57 @@ struct SchemeDetailView: View {
         }
     }
 
-    private func destination(_ scheme: Scheme) -> some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Layout.spacing, verticalSpacing: Layout.spacing) {
-            GridRow {
-                Text("Device").foregroundStyle(.secondary).frame(width: Layout.pickerLabelWidth, alignment: .leading)
-                devicePicker
-            }
-            GridRow {
-                Text("Configuration").foregroundStyle(.secondary).frame(width: Layout.pickerLabelWidth, alignment: .leading)
-                Picker("Configuration", selection: $project.selectedConfiguration) {
-                    ForEach(project.snapshot?.configurations ?? [], id: \.self) { Text($0).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
-                .accessibilityIdentifier(AccessibilityID.configurationPicker)
-            }
-            if !app.extraDeviceCandidates.isEmpty {
-                GridRow {
-                    Text("Also install on").foregroundStyle(.secondary).frame(width: Layout.pickerLabelWidth, alignment: .leading)
-                    ExtraDevicesMenu(app: app)
+    /// Three facts a person checks before building: what the device has, how the last build went,
+    /// and how much disk the build output takes.
+    private func facts(_ scheme: Scheme) -> some View {
+        // Equal tiles across the whole width, whatever their number.
+        HStack(alignment: .top, spacing: Layout.spacing) {
+            if scheme.isInstallable { deviceCard }
+            lastBuildCard
+            if let folder = app.buildFolder {
+                StatCard(
+                    title: "Build files",
+                    value: folder.buildBytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "Empty",
+                    detail: app.buildFolderMessage ?? "Kept by Xcode for this project"
+                ) {
+                    if app.isCleaningBuildFolder {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Button("Clean…") { confirmsClean = true }
+                            .disabled(folder.buildBytes == nil || app.run.isRunning)
+                            .accessibilityIdentifier(AccessibilityID.cleanButton)
+                    }
                 }
             }
         }
-        .disabled(app.run.isRunning)
     }
 
-    @ViewBuilder private var devicePicker: some View {
-        let devices = app.devicesForSelectedScheme
-        if devices.isEmpty {
-            // Loading, failed and "nothing connected" each say what is going on.
-            switch app.devices.state {
-            case .idle, .loading:
-                HStack(spacing: Layout.spacingSmall) {
-                    ProgressView().controlSize(.small)
-                    Text("Looking for devices…").foregroundStyle(.secondary)
-                }
-            case .failed(let message):
-                Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.red)
-            case .loaded:
-                Text("No device or simulator fits this scheme. Connect a device with a cable and unlock it.")
-                    .foregroundStyle(.secondary)
-            }
+    @ViewBuilder private var deviceCard: some View {
+        let title = app.selectedDevice.map { "On \($0.name)" } ?? "On the device"
+        if let record = app.lastInstall {
+            // The branch (or the release build's name) is the fact; the commit and the age are context.
+            let commit = record.source.map { "\($0.commit)\($0.hasLocalChanges ? " with local changes" : "") · " } ?? ""
+            StatCard(
+                title: title, value: record.source?.branch ?? "Installed",
+                detail: "\(commit)\(record.date.formatted(.relative(presentation: .named))) · \(record.configuration)"
+            )
+            .help("What Build Desk last installed for this scheme on this device, and the code it was built from")
         } else {
-            Picker("Device", selection: deviceSelection) {
-                deviceSection("Devices", devices.filter { $0.kind == .physical })
-                deviceSection("Simulators", devices.filter { $0.kind == .simulator })
-            }
-            .labelsHidden()
-            .fixedSize()
-            .accessibilityIdentifier(AccessibilityID.devicePicker)
+            StatCard(title: title, value: "Nothing yet", detail: "Not installed from here so far")
         }
     }
 
-    @ViewBuilder
-    private func deviceSection(_ title: String, _ devices: [Device]) -> some View {
-        if !devices.isEmpty {
-            Section(title) {
-                ForEach(devices) { device in
-                    Label("\(device.name) — \(device.detail)", systemImage: device.symbol).tag(Optional(device.id))
-                }
-            }
+    @ViewBuilder private var lastBuildCard: some View {
+        if let record = app.historyForSelectedScheme.first(where: { $0.buildSeconds != nil }) {
+            let warnings = "\(record.warningCount.formatted()) warning\(record.warningCount == 1 ? "" : "s")"
+            let new = record.newWarningCount.map { $0 > 0 ? " · \($0.formatted()) new" : " · none new" } ?? ""
+            StatCard(
+                title: record.result == .succeeded ? "Last build" : "Last build failed",
+                value: DurationText.short(record.buildSeconds ?? record.totalSeconds), detail: warnings + new
+            )
+        } else {
+            StatCard(title: "Last build", value: "None yet", detail: "The first build is a full one")
         }
-    }
-
-    /// Shows the device that will be used, which is the first ready one until the user picks.
-    private var deviceSelection: Binding<String?> {
-        Binding(
-            get: { app.selectedDevice?.id },
-            set: { app.devices.selectedDeviceID = $0 }
-        )
     }
 
     private func actions(_ scheme: Scheme) -> some View {
@@ -200,6 +185,10 @@ struct SchemeDetailView: View {
                 Toggle("Launch after install", isOn: $app.launchesAfterInstall)
                     .disabled(app.run.isRunning)
                     .accessibilityIdentifier(AccessibilityID.launchToggle)
+                if !app.extraDeviceCandidates.isEmpty {
+                    Text("Also on").foregroundStyle(.secondary)
+                    ExtraDevicesMenu(app: app).disabled(app.run.isRunning)
+                }
                 Spacer()
                 if app.canTestSelection { testButton }
                 InstalledAppMenu(app: app, scheme: scheme)
@@ -226,27 +215,28 @@ struct SchemeDetailView: View {
         }
     }
 
+    /// Rarely needed, so it starts closed.
     @ViewBuilder
     private func targets(_ scheme: Scheme) -> some View {
-        if !scheme.buildTargets.isEmpty || !scheme.testTargets.isEmpty {
-            VStack(alignment: .leading, spacing: Layout.spacingSmall) {
-                Text("Targets in this scheme").font(.headline)
+        let rows = scheme.buildTargets.map { ($0, false) } + scheme.testTargets.map { ($0, true) }
+        if !rows.isEmpty {
+            DisclosureGroup("\(rows.count) target\(rows.count == 1 ? "" : "s") in this scheme") {
                 VStack(spacing: 0) {
-                    let rows = scheme.buildTargets.map { ($0, false) } + scheme.testTargets.map { ($0, true) }
                     ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
                         if index > 0 { Divider() }
                         HStack {
                             Text(row.0.name)
                             Spacer()
-                            Text(row.1 ? "Tests" : kindLabel(for: row.0))
-                                .foregroundStyle(.secondary)
+                            Text(row.1 ? "Tests" : kindLabel(for: row.0)).foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, Layout.spacing)
                         .padding(.vertical, Layout.spacingSmall)
                     }
                 }
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
+                .padding(.top, Layout.spacingSmall)
             }
+            .foregroundStyle(.secondary)
         }
     }
 

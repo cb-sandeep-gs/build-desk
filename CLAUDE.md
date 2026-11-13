@@ -90,6 +90,7 @@ and dark:
 .build/debug/BuildDeskApp --snapshot rel.png --release      # Release mode
 .build/debug/BuildDeskApp --snapshot act.png --release-sheet  # a release action with its plan
 .build/debug/BuildDeskApp --snapshot tag.png --release-install  # a build being built from its tag
+.build/debug/BuildDeskApp --snapshot act.png --activity         # the Activity page
 ```
 
 ## Testing against a real project

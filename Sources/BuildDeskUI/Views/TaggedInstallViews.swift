@@ -108,25 +108,3 @@ struct TaggedSourceLine: View {
         .font(.callout)
     }
 }
-
-/// The button of a build's details that builds it from its tag and installs it.
-struct TaggedInstallButton: View {
-    let deviceName: String?
-    /// Why it can't be done right now; nil when it can.
-    let blocker: String?
-    let action: () -> Void
-
-    var body: some View {
-        HStack(spacing: Layout.spacing) {
-            let title = deviceName.map { "Build and Install on \($0)…" } ?? "Build and Install…"
-            Button(title, systemImage: "arrow.down.to.line", action: action)
-                .disabled(blocker != nil)
-                .help("Build this version from its tagged code on this Mac and install it")
-                .accessibilityIdentifier(AccessibilityID.taggedInstallButton)
-            if let blocker {
-                Text(blocker).foregroundStyle(.secondary).lineLimit(2)
-            }
-        }
-        .font(.callout)
-    }
-}

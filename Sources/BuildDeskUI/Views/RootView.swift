@@ -141,45 +141,55 @@ struct WelcomeView: View {
     }
 }
 
-/// An open project: scheme list on the left, the selected scheme on the right.
+/// An open project: the sidebar on the left, the chosen page on the right, and the run controls
+/// in the toolbar. The shape is the same on every page.
 struct ProjectView: View {
     @Bindable var app: AppModel
     @Bindable var project: ProjectModel
 
     var body: some View {
-        Group {
-            if app.mode == .release, let release = app.release {
-                ReleaseView(release: release, app: app)
-            } else {
-                NavigationSplitView {
-                    SchemeListView(project: project)
-                        .navigationSplitViewColumnWidth(
-                            min: Layout.sidebarMinWidth, ideal: Layout.sidebarIdealWidth, max: Layout.sidebarMaxWidth
-                        )
-                } detail: {
-                    SchemeDetailView(app: app, project: project)
-                }
-            }
+        NavigationSplitView {
+            SchemeListView(app: app, project: project)
+                .navigationSplitViewColumnWidth(min: Layout.sidebarMinWidth, ideal: Layout.sidebarIdealWidth, max: Layout.sidebarMaxWidth)
+        } detail: {
+            page
         }
         .navigationTitle(project.container.name)
         .navigationSubtitle(project.container.url.deletingLastPathComponent().lastPathComponent)
-        .toolbar {
-            // Only a project with release commands has a second mode to switch to.
-            if app.release != nil {
-                ToolbarItem(placement: .principal) {
-                    Picker("Mode", selection: $app.mode) {
-                        ForEach(WindowMode.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .accessibilityIdentifier(AccessibilityID.modePicker)
-                }
+        .toolbar { toolbar }
+        // The project's name is in the window's title for the Window menu; the toolbar's room goes to the controls.
+        .hidingToolbarTitle()
+        // The sidebar lists the release apps, so their status is read as soon as the project is open.
+        .task(id: project.container.url) { if let release = app.release, release.status == nil { await release.refresh() } }
+    }
+
+    @ViewBuilder private var page: some View {
+        switch app.mode {
+        case .release:
+            if let release = app.release {
+                ReleaseView(release: release, app: app)
+            } else {
+                SchemeDetailView(app: app, project: project)
             }
-            ToolbarItem(placement: .primaryAction) {
+        case .activity:
+            ActivityView(app: app)
+        case .build:
+            SchemeDetailView(app: app, project: project)
+        }
+    }
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
+            ToolbarDevicePicker(app: app)
+            ToolbarConfigurationPicker(project: project, isBusy: app.run.isRunning)
+        }
+        ToolbarItem(placement: .principal) {
+            ToolbarStatusView(status: app.toolbarStatus)
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            ToolbarRunButton(app: app)
+            Menu("More", systemImage: "ellipsis.circle") {
                 Button("Open Project…", systemImage: "folder") { ProjectPicker.chooseAndOpen(in: app) }
-                    .help("Open another project")
-            }
-            ToolbarItem(placement: .primaryAction) {
                 Button("Reload", systemImage: "arrow.clockwise") {
                     Task {
                         await project.load()
@@ -187,8 +197,8 @@ struct ProjectView: View {
                         await app.release?.refresh()
                     }
                 }
-                .help("Reload schemes, devices and the release status")
             }
+            .help("Open another project, or reload schemes, devices and the release status")
         }
     }
 }

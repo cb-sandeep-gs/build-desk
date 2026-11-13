@@ -24,6 +24,7 @@ enum Snapshot {
         static let release = "--release"
         static let releaseSheet = "--release-sheet"
         static let releaseInstall = "--release-install"
+        static let activity = "--activity"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -90,6 +91,7 @@ enum Snapshot {
         let model = await makeModel(arguments)
         // The popover shows release lines once the status has been read; the app's watch does that.
         if arguments.contains(Argument.menu) { await model.release?.refresh() }
+        if arguments.contains(Argument.activity) { model.mode = .activity }
 
         // The menu bar popover and the app-file sheet are drawn in a bare window as tall as their
         // content; the main window in a titled one of the requested size.

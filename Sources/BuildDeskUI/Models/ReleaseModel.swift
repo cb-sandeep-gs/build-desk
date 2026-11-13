@@ -6,11 +6,14 @@ import Observation
 public enum WindowMode: String, Sendable, CaseIterable {
     case build
     case release
+    /// Past runs and the files Build Desk keeps on disk.
+    case activity
 
     public var title: String {
         switch self {
         case .build: "Build"
         case .release: "Release"
+        case .activity: "Activity"
         }
     }
 }
@@ -28,6 +31,8 @@ public final class ReleaseModel {
     public var selectedAppID: String?
     /// The build whose details are open; nil when none is.
     public var selectedBuildID: String?
+    /// Which builds the table shows.
+    public var filter: ReleaseBuildFilter = .all
     /// The release action in progress, shown as a sheet; nil when none is.
     public internal(set) var activeAction: ReleaseActionModel?
 

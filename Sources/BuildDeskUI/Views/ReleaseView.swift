@@ -1,7 +1,8 @@
 import BuildDeskCore
 import SwiftUI
 
-/// Release mode: where each app stands and its recent builds.
+/// The Release page of one app: where it stands, its builds as a table grouped by version, and
+/// the selected build's details and actions in an inspector beside the table.
 struct ReleaseView: View {
     @Bindable var release: ReleaseModel
     let app: AppModel
@@ -21,15 +22,14 @@ struct ReleaseView: View {
                 } actions: {
                     Button("Try Again") { Task { await release.refresh() } }
                 }
-            case .loaded(let status):
-                if status.apps.isEmpty {
+            case .loaded:
+                if let selected = release.selectedApp {
+                    content(selected)
+                } else {
                     ContentUnavailableView(
-                        "No apps to release",
-                        systemImage: "shippingbox",
+                        "No apps to release", systemImage: "shippingbox",
                         description: Text("The project's release commands list no app.")
                     )
-                } else {
-                    content(status)
                 }
             }
         }
@@ -51,52 +51,45 @@ struct ReleaseView: View {
         } message: { build in
             Text(app.taggedInstallSummary(for: build) ?? "")
         }
-        // The first look at Release mode reads the status; later looks keep what is there.
         .task { if release.status == nil { await release.refresh() } }
-        .task { await app.refreshTaggedSource() }
         .accessibilityIdentifier(AccessibilityID.releaseView)
     }
 
-    private func content(_ status: ReleaseStatus) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Layout.spacingLarge) {
-                header(status)
-                if let install = app.taggedInstall, app.showsTaggedInstall { TaggedInstallBanner(app: app, install: install) }
-                if let app = release.selectedApp {
+    private func content(_ selected: ReleaseApp) -> some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: Layout.spacing) {
+                    header(selected)
+                    if let install = app.taggedInstall, app.showsTaggedInstall { TaggedInstallBanner(app: app, install: install) }
                     storeAlerts
-                    cards(app)
-                    if release.canAct { actions(app) }
-                    builds
+                    ReleaseStages(app: selected, next: release.storeApp?.storeVersions?.first, latestState: latestState(of:))
+                    filterBar(selected)
                 }
-                TaggedSourceLine(app: app)
+                .padding(Layout.spacingLarge)
+                Divider()
+                ReleaseBuildTable(release: release)
             }
-            .frame(maxWidth: Layout.detailMaxWidth, alignment: .leading)
-            .padding(Layout.spacingLarge)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            if let build = release.selectedBuild {
+                Divider()
+                ReleaseInspector(release: release, app: app, build: build) { pendingInstall = build }
+                    .frame(width: Layout.inspectorWidth)
+            }
         }
     }
 
-    private func header(_ status: ReleaseStatus) -> some View {
-        HStack(spacing: Layout.spacing) {
-            if status.apps.count > 1 {
-                Picker("App", selection: $release.selectedAppID) {
-                    ForEach(status.apps) { Text($0.name).tag(Optional($0.id)) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-            } else if let app = status.apps.first {
-                Text(app.name).font(.title2.weight(.semibold))
-            }
-            Spacer()
-            if let head = status.head {
+    private func header(_ selected: ReleaseApp) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Layout.spacing) {
+            Text(selected.name).font(.title.weight(.semibold))
+            if let head = release.status?.head {
                 // Which code the numbers below were counted from.
                 Label(Self.describe(head), systemImage: "arrow.triangle.branch")
-                    .font(.callout.monospaced())
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
+            Spacer()
             if release.isRefreshing { ProgressView().controlSize(.small) }
         }
     }
@@ -117,19 +110,35 @@ struct ReleaseView: View {
         }
     }
 
-    /// Each button opens a sheet that previews the action; nothing is done from here.
-    private func actions(_ app: ReleaseApp) -> some View {
+    /// The filters on the left, the actions on the right. Each action opens a sheet that previews it.
+    private func filterBar(_ selected: ReleaseApp) -> some View {
         HStack(spacing: Layout.spacing) {
-            Button("New Test Build…", systemImage: "paperplane") { release.begin(.testflight) }
-                .buttonStyle(.borderedProminent)
-                .disabled(app.tracks.isEmpty)
-                .accessibilityIdentifier(AccessibilityID.newTestBuild)
-            Button("Store Release…", systemImage: "bag") { release.begin(.store) }
-                .disabled(!release.builds.contains { $0.kind == .testflight })
-                .help("Mark the test build that was shipped as the store release")
+            if release.filters.count > 1 {
+                Picker("Show", selection: $release.filter) {
+                    ForEach(release.filters, id: \.self) { Text(release.title(of: $0)).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
             Spacer()
+            if release.canAct {
+                Button("Store Release…", systemImage: "bag") { release.begin(.store) }
+                    .fixedSize()
+                    .disabled(!release.builds.contains { $0.kind == .testflight })
+                    .help("Mark the test build that was shipped as the store release")
+                Button("New Build…", systemImage: "plus") { release.begin(.testflight) }
+                    .buttonStyle(.borderedProminent)
+                    .fixedSize()
+                    .disabled(selected.tracks.isEmpty)
+                    .accessibilityIdentifier(AccessibilityID.newTestBuild)
+            }
         }
-        .controlSize(.large)
+    }
+
+    /// The live state of a track's newest build, for its stage tile.
+    private func latestState(of track: ReleaseTrack) -> String? {
+        track.latest.map { release.stateText(of: $0) }.flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// "develop @ a41c9e2 · local changes"
@@ -137,151 +146,141 @@ struct ReleaseView: View {
         let commit = String(head.commit.prefix(Layout.shortCommitLength))
         return "\(head.branch ?? "detached") @ \(commit)\(head.dirty == true ? " · local changes" : "")"
     }
-
-    private func cards(_ app: ReleaseApp) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: Layout.releaseCardMinWidth), spacing: Layout.spacing)], spacing: Layout.spacing) {
-            SummaryCard(title: "Version in code", value: app.version, detail: nil)
-            SummaryCard(
-                title: "On the store", value: app.store?.version ?? "None",
-                detail: app.commitsSinceStore.map { "\($0.formatted()) commits since" }
-            )
-            // The version being prepared on the store's side, when the store is connected.
-            if let next = release.storeApp?.storeVersions?.first, let state = next.state {
-                SummaryCard(title: "Next on the store", value: next.version, detail: state)
-            }
-            ForEach(app.tracks) { track in
-                SummaryCard(
-                    title: track.name, value: track.latest?.version ?? "No build yet",
-                    detail: track.commitsSince.map { "\($0.formatted()) commits since" }
-                )
-            }
-        }
-    }
-
-    @ViewBuilder private var builds: some View {
-        VStack(alignment: .leading, spacing: Layout.spacingSmall) {
-            Text("Builds").font(.headline)
-            if release.builds.isEmpty {
-                Text("No builds yet for this app.").foregroundStyle(.secondary)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(release.builds.enumerated()), id: \.element.id) { index, build in
-                        if index > 0 { Divider() }
-                        BuildRow(
-                            build: build, track: release.trackName(of: build), store: release.storeBuild(for: build),
-                            isOpen: release.selectedBuildID == build.id,
-                            deviceName: app.selectedDevice?.name, installBlocker: app.taggedInstallBlocker(for: build),
-                            install: { pendingInstall = build },
-                            toggle: { release.selectedBuildID = release.selectedBuildID == build.id ? nil : build.id }
-                        )
-                    }
-                }
-                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
-            }
-        }
-    }
 }
 
-/// One number of the summary: a label, a value and a line of context.
-private struct SummaryCard: View {
-    let title: String
-    let value: String
-    let detail: String?
+/// The path a version takes, left to right: the code, each line of test builds, the store.
+private struct ReleaseStages: View {
+    let app: ReleaseApp
+    /// The version being prepared on the store's side, when the store is connected.
+    let next: ReleaseStoreVersion?
+    let latestState: (ReleaseTrack) -> String?
 
     var body: some View {
+        HStack(spacing: 0) {
+            stage("In code", app.version, nil)
+            ForEach(app.tracks) { track in
+                Divider()
+                stage(
+                    track.name, track.latest?.version ?? "No build yet",
+                    latestState(track) ?? track.commitsSince.map { "\($0.formatted()) commits since" }
+                )
+            }
+            Divider()
+            stage("App Store", app.store?.version ?? "None", storeDetail)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
+    }
+
+    /// What is coming next on the store when that is known, else how far the code has moved on.
+    private var storeDetail: String? {
+        if let next, let state = next.state { return "\(next.version): \(state)" }
+        return app.commitsSinceStore.map { "\($0.formatted()) commits since" }
+    }
+
+    private func stage(_ title: String, _ value: String, _ detail: String?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.callout).foregroundStyle(.secondary).lineLimit(1)
-            Text(value).font(.title3.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(value).font(.title3.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
             Text(detail ?? " ").font(.caption).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(Layout.spacing)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
         .accessibilityElement(children: .combine)
     }
 }
 
-/// A build's cloud run and testing state, in a few words.
-private struct StoreState: View {
-    let store: ReleaseStoreBuild
+/// The builds of the selected app, under the app version they belong to.
+private struct ReleaseBuildTable: View {
+    @Bindable var release: ReleaseModel
 
     var body: some View {
+        let groups = release.buildGroups
+        if groups.isEmpty {
+            ContentUnavailableView(
+                release.filter == .all ? "No builds yet" : "No builds match", systemImage: "shippingbox",
+                description: Text(release.filter == .all ? "Create the first one with New Build." : "Choose All to see every build.")
+            )
+        } else {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    ForEach(groups) { group in
+                        Section {
+                            ForEach(group.builds) { build in
+                                ReleaseBuildRow(
+                                    build: build, track: release.trackName(of: build), store: release.storeBuild(for: build),
+                                    state: release.stateText(of: build), isSelected: release.selectedBuildID == build.id
+                                ) {
+                                    release.selectedBuildID = release.selectedBuildID == build.id ? nil : build.id
+                                }
+                                Divider().padding(.leading, Layout.spacingLarge)
+                            }
+                        } header: {
+                            header(group)
+                        }
+                    }
+                }
+            }
+            .accessibilityIdentifier(AccessibilityID.releaseTable)
+        }
+    }
+
+    private func header(_ group: ReleaseBuildGroup) -> some View {
         HStack(spacing: Layout.spacingSmall) {
-            switch store.cloudState {
+            Text(group.id).font(.callout.weight(.semibold)).monospacedDigit()
+            if group.isOnStore { Badge(text: "On the App Store", symbol: "bag") }
+            Spacer()
+            Text(group.builds.count == 1 ? "1 build" : "\(group.builds.count) builds").font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, Layout.spacingLarge)
+        .padding(.vertical, Layout.spacingSmall)
+        .background(.bar)
+    }
+}
+
+/// One build: version, track, state and age in columns. A click opens it in the inspector.
+private struct ReleaseBuildRow: View {
+    let build: ReleaseBuild
+    let track: String
+    let store: ReleaseStoreBuild?
+    let state: String
+    let isSelected: Bool
+    let select: () -> Void
+
+    var body: some View {
+        Button(action: select) {
+            HStack(spacing: Layout.spacing) {
+                Text(build.version).monospacedDigit().fontWeight(isSelected ? .semibold : .regular)
+                    .frame(width: Layout.tableVersionWidth, alignment: .leading)
+                Text(track).foregroundStyle(.secondary).lineLimit(1)
+                    .frame(width: Layout.tableTrackWidth, alignment: .leading)
+                mark
+                Text(state).foregroundStyle(store?.cloudState == .failed ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary)).lineLimit(1)
+                Spacer()
+                if let date = build.date {
+                    Text(Date(timeIntervalSince1970: date).formatted(.relative(presentation: .named)))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, Layout.spacingLarge)
+            .padding(.vertical, Layout.spacingSmall + 1)
+            .background(isSelected ? AnyShapeStyle(.tint.opacity(0.16)) : AnyShapeStyle(.clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(build.version), \(track), \(state)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder private var mark: some View {
+        Group {
+            switch store?.cloudState {
             case .running: ProgressView().controlSize(.mini)
             case .succeeded: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             case .failed: Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
-            case nil: EmptyView()
-            }
-            Text(store.stateText).font(.callout).foregroundStyle(.secondary).lineLimit(1)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// One build; a click opens its details in place.
-private struct BuildRow: View {
-    let build: ReleaseBuild
-    let track: String
-    /// The build's live state, when the store is connected and lists it.
-    let store: ReleaseStoreBuild?
-    let isOpen: Bool
-    /// The device a build-and-install would go to.
-    let deviceName: String?
-    let installBlocker: String?
-    let install: () -> Void
-    let toggle: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Layout.spacingSmall) {
-            Button(action: toggle) {
-                HStack(spacing: Layout.spacing) {
-                    Image(systemName: isOpen ? "chevron.down" : "chevron.right")
-                        .font(.caption).foregroundStyle(.secondary).frame(width: Layout.iconColumnWidth)
-                    Text(build.version).monospacedDigit()
-                    Badge(text: track, symbol: build.kind == .store ? "bag" : "paperplane")
-                    if let store { StoreState(store: store) }
-                    Spacer()
-                    if let date = build.date {
-                        Text(Date(timeIntervalSince1970: date).formatted(.relative(presentation: .named)))
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(build.version), \(track)")
-            if isOpen {
-                details
-                TaggedInstallButton(deviceName: deviceName, blocker: installBlocker, action: install)
-                    .padding(.leading, Layout.iconColumnWidth + Layout.spacing)
-                    .padding(.bottom, Layout.spacingSmall)
+            case nil: Image(systemName: build.kind == .store ? "bag" : "circle.dotted").foregroundStyle(.tertiary)
             }
         }
-        .padding(.horizontal, Layout.spacing)
-        .padding(.vertical, Layout.spacingSmall)
-    }
-
-    private var details: some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: Layout.spacing, verticalSpacing: 2) {
-            row("Name", build.id)
-            if let commit = build.commit { row("Commit", String(commit.prefix(Layout.shortCommitLength))) }
-            if let branch = build.branch { row("Branch", branch) }
-            if let from = build.from { row("Shipped build", from) }
-            if let number = store?.number, !number.isEmpty { row("Store build", number) }
-            if let workflow = store?.cloudDetail { row("Cloud workflow", workflow) }
-            if let groups = store?.groups, !groups.isEmpty { row("Tester groups", groups.formatted(.list(type: .and))) }
-            if let notes = build.notes { row("Notes", notes) }
-        }
-        .font(.callout)
-        .padding(.leading, Layout.iconColumnWidth + Layout.spacing)
-        .padding(.bottom, Layout.spacingSmall)
-    }
-
-    private func row(_ label: String, _ value: String) -> some View {
-        GridRow {
-            Text(label).foregroundStyle(.secondary)
-            Text(value).textSelection(.enabled).lineLimit(2)
-        }
+        .frame(width: Layout.iconColumnWidth)
     }
 }

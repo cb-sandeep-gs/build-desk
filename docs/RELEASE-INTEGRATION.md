@@ -115,7 +115,7 @@ command-line status command; one was added there.
 | Part | Where | What it does |
 |---|---|---|
 | Model | `ReleaseModel`, `WindowMode` | Reads the status through the project's commands, keeps the chosen app and open build across refreshes, and shows a provider's failure in its own words with a retry. |
-| Window | `ReleaseView`, the mode switch in the toolbar | A Build / Release switch appears only for a project with release commands. Release mode shows an app switcher, the checkout it was read from, summary cards (version in code, on the store, one per track) and the recent builds; a build opens in place to show its name, commit, branch and first line of notes. |
+| Window | `ReleaseView` (since the 0.18 redesign: a page per app in the sidebar, a builds table and `ReleaseInspector`; see PLAN.md) | Originally a Build / Release switch that appeared only for a project with release commands. Release mode shows an app switcher, the checkout it was read from, summary cards (version in code, on the store, one per track) and the recent builds; a build opens in place to show its name, commit, branch and first line of notes. |
 | Checks | `--snapshot --release` | Renders Release mode with the demo, or with a real project when `--project` is given. |
 
 Tried with the first provider: two apps, their four tracks and sixty recent builds were shown from its real data.
