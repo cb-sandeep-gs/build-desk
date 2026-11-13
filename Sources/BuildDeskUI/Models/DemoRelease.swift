@@ -76,7 +76,8 @@ struct DemoRelease: ReleaseProviding {
 
     func details(of build: ReleaseBuild, _ provider: ReleaseProvider) async throws -> ReleaseBuildDetails {
         let lines = [
-            "Changes in this build", "- \(build.notes ?? "Fixes")", "- Smaller images on the product page", "- Fix a crash on an empty cart",
+            "Changes in this build", "- \(build.notes ?? "Fixes")", "- Smaller images on the product page",
+            "- Fix a crash on an empty cart",
         ]
         let notes = lines.joined(separator: "\n")
         return ReleaseBuildDetails(id: build.id, notes: notes, testerNotes: "Please try the cart with a discount code.")
