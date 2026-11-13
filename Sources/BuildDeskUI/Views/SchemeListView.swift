@@ -34,7 +34,7 @@ struct SchemeListView: View {
                 Section(group.title) {
                     ForEach(group.schemes) { scheme in
                         SchemeRow(scheme: scheme, platform: project.snapshot?.platform(of: scheme))
-                            .tag(Optional(SidebarItem.scheme(scheme.name)))
+                            .tag(SidebarItem.scheme(scheme.name))
                     }
                 }
             }
@@ -42,7 +42,7 @@ struct SchemeListView: View {
             Section("Activity") {
                 Label("Runs and storage", systemImage: "clock.arrow.circlepath")
                     .badge(Text(app.storageBytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? ""))
-                    .tag(Optional(SidebarItem.activity))
+                    .tag(SidebarItem.activity)
             }
         }
         .searchable(text: $project.filter, placement: .sidebar, prompt: "Filter schemes")
@@ -77,7 +77,7 @@ struct SchemeListView: View {
             ForEach(app.releaseApps) { releaseApp in
                 Label(releaseApp.name, systemImage: "shippingbox")
                     .badge(Text(releaseApp.version))
-                    .tag(Optional(SidebarItem.releaseApp(releaseApp.id)))
+                    .tag(SidebarItem.releaseApp(releaseApp.id))
             }
         }
     }
