@@ -83,12 +83,29 @@ public struct ReleaseStoreVersion: Sendable, Equatable, Codable {
 public struct ReleaseAlert: Sendable, Equatable, Codable {
     /// "error" or "warning".
     public let severity: String
+    /// What happened, in one sentence.
     public let message: String
+    /// What the person can do about it; nil when the provider knows no step.
+    public let help: String?
+    /// A web page where that step is taken.
+    public let link: String?
 
-    public init(severity: String, message: String) {
+    public init(severity: String, message: String, help: String? = nil, link: String? = nil) {
         self.severity = severity
         self.message = message
+        self.help = help
+        self.link = link
     }
 
     public var isError: Bool { severity == "error" }
+
+    /// The link as a web address. Anything that is not http(s) is not offered: the text comes from
+    /// a project's command, and only a web page may be opened from it.
+    public var webPage: URL? {
+        guard let link, let url = URL(string: link), let scheme = url.scheme?.lowercased(),
+              ReleaseAlert.webSchemes.contains(scheme), url.host != nil else { return nil }
+        return url
+    }
+
+    private static let webSchemes: Set<String> = ["https", "http"]
 }

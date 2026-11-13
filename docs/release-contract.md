@@ -134,7 +134,8 @@ Optional. Called after `status`, with no extra arguments. It may use the network
          "testing": "In testing", "groups": ["Staff"]}
       ],
       "storeVersions": [{"version": "4.2", "state": "Prepare for submission"}],
-      "alerts": [{"severity": "warning", "message": "Build 800 is in a partner group"}]
+      "alerts": [{"severity": "warning", "message": "Build 800 is in a partner group",
+                  "help": "Remove it from that group on the store's site.", "link": "https://store.example.com/builds/800"}]
     }
   ]
 }
@@ -148,7 +149,9 @@ Optional. Called after `status`, with no extra arguments. It may use the network
 | `builds[].testing` | The testing state in words; null until the build has reached testers. |
 | `builds[].groups` | The tester groups that have the build. |
 | `storeVersions` | Versions on the store's side with their state, newest first. |
-| `alerts` | Things that need attention; `severity` is `error` or `warning`. |
+| `alerts` | Things that need attention; `severity` is `error` or `warning`. `message` says what happened in one sentence, in words a person understands (no internal section names or bare status codes). |
+| `alerts[].help` | Optional. What the person can do about it. Shown under the message. |
+| `alerts[].link` | Optional. An `https` page where that step is taken. Build Desk offers it as "Open…"; any other kind of address is ignored. |
 
 ## Later versions
 

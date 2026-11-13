@@ -52,11 +52,13 @@ final class ReleaseStoreModelTests: XCTestCase {
         // The status itself is fine; only the live part is missing.
         XCTAssertEqual(model.selectedApp?.id, "sample")
         XCTAssertEqual(model.storeNote, "Store not connected. Run the login command.")
+        XCTAssertFalse(model.storeFailed)
         XCTAssertNil(model.storeBuild(for: Sample.internalBuild))
 
         releases.storeStatus.value = .failure(.releaseFailed(message: "The network is down."))
         await model.refresh()
         XCTAssertEqual(model.storeNote, "Couldn't read the store: The network is down.")
+        XCTAssertTrue(model.storeFailed)
         XCTAssertNotNil(model.status)
     }
 

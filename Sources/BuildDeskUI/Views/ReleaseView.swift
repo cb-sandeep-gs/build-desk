@@ -98,16 +98,19 @@ struct ReleaseView: View {
     /// What needs attention on the store's side, and the state of the connection to it.
     @ViewBuilder private var storeAlerts: some View {
         ForEach(release.storeApp?.alerts ?? [], id: \.message) { alert in
-            Label(alert.message, systemImage: alert.isError ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
-                .font(.callout)
-                .padding(Layout.spacing)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    (alert.isError ? Color.red : Color.orange).opacity(0.15), in: RoundedRectangle(cornerRadius: Layout.cornerRadius)
-                )
+            ReleaseAlertBanner(alert: alert, isRetrying: release.isRefreshing) { Task { await release.refresh() } }
         }
         if let note = release.storeNote {
-            Label(note, systemImage: "network").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+            HStack(spacing: Layout.spacing) {
+                Label(note, systemImage: "network").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                // A failed read is worth another try; "reading" and "not connected" are not.
+                if release.storeFailed {
+                    Button("Try Again") { Task { await release.refresh() } }
+                        .buttonStyle(.link)
+                        .disabled(release.isRefreshing)
+                        .accessibilityIdentifier(AccessibilityID.releaseStoreRetry)
+                }
+            }
         }
     }
 

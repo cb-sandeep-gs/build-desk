@@ -108,7 +108,12 @@ struct DemoRelease: ReleaseProviding {
                                       testing: "In testing", groups: ["Payment partners"]),
                     ReleaseStoreBuild(id: "HarborInternal-4.2.1", number: "805", cloud: "failed", cloudDetail: "Release workflow"),
                 ],
-                storeVersions: [ReleaseStoreVersion(version: "4.2", state: "Prepare for submission")]
+                storeVersions: [ReleaseStoreVersion(version: "4.2", state: "Prepare for submission")],
+                alerts: [ReleaseAlert(
+                    severity: "warning", message: "Version 4.2 has no screenshots for the largest phone yet.",
+                    help: "Add them on the version's page before sending it for review.",
+                    link: "https://example.com/harbor/4.2"
+                )]
             ),
         ])
     }

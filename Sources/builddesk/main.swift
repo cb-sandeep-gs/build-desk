@@ -261,7 +261,11 @@ func releaseStore(_ provider: ReleaseProvider, _ arguments: Arguments) async thr
     for app in store.apps {
         print(app.id)
         Output.table(app.builds.map { ["  \($0.id)", $0.cloud ?? "", $0.testing ?? "", ($0.groups ?? []).joined(separator: ", ")] })
-        (app.alerts ?? []).forEach { print("  \($0.severity): \($0.message)") }
+        for alert in app.alerts ?? [] {
+            print("  \(alert.severity): \(alert.message)")
+            // The next step and where to take it, when the project knows one.
+            [alert.help, alert.webPage?.absoluteString].compactMap { $0 }.forEach { print("    \($0)") }
+        }
     }
 }
 

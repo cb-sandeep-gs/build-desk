@@ -127,6 +127,12 @@ public final class ReleaseModel {
         }
     }
 
+    /// True when the last read of the store failed (not while reading, and not when simply not connected).
+    public var storeFailed: Bool {
+        if case .failed = store { return true }
+        return false
+    }
+
     /// Starts a release action for the selected app. Nothing happens until its plan is confirmed.
     public func begin(_ kind: ReleaseAction.Kind) {
         guard canAct, activeAction == nil, let app = selectedApp, let status else { return }

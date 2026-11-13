@@ -195,6 +195,17 @@ final class ReleaseStoreContractTests: XCTestCase {
         commands: ReleaseCommands(status: ["./tool", "status"], store: ["./tool", "store"]), folder: URL(fileURLWithPath: "/projects/shop")
     )
 
+    func testAnAlertOnlyOffersAWebPage() {
+        func page(_ link: String?) -> URL? { ReleaseAlert(severity: "warning", message: "m", link: link).webPage }
+        XCTAssertNotNil(page("https://store.example.com/business"))
+        // The text comes from a project's command: files, other apps and plain words are not opened.
+        let refused = ["file:///Applications/Calculator.app", "x-apple.systempreferences:general", "not a link", "https://", ""]
+        for link in refused {
+            XCTAssertNil(page(link), link)
+        }
+        XCTAssertNil(page(nil))
+    }
+
     func testStoreStateIsRead() async throws {
         let runner = FakeToolRunner()
         let json = """
@@ -202,7 +213,9 @@ final class ReleaseStoreContractTests: XCTestCase {
           "builds":[{"id":"ShopInternal-4.2.3","number":"812","cloud":"running","cloudDetail":"Release workflow","testing":null},
                     {"id":"ShopInternal-4.2.2","cloud":"succeeded","testing":"In testing","groups":["Staff"]}],
           "storeVersions":[{"version":"4.2","state":"Prepare for submission"}],
-          "alerts":[{"severity":"warning","message":"runs: not visible to this key"}]}]}
+          "alerts":[{"severity":"warning","message":"Cloud builds: not visible to this key"},
+                    {"severity":"warning","message":"Access is paused.","help":"Accept the agreement.",
+                     "link":"https://store.example.com/business"}]}]}
         """
         runner.onRun = { _ in ToolResult(exitCode: 0, stdout: Data(json.utf8)) }
 
@@ -212,6 +225,11 @@ final class ReleaseStoreContractTests: XCTestCase {
         XCTAssertEqual(store.apps.first?.builds.map(\.cloudState), [.running, .succeeded])
         XCTAssertEqual(store.apps.first?.builds.last?.groups, ["Staff"])
         XCTAssertEqual(store.apps.first?.alerts?.first?.isError, false)
+        // The next step and its page are optional: an alert without them still reads.
+        XCTAssertNil(store.apps.first?.alerts?.first?.help)
+        XCTAssertNil(store.apps.first?.alerts?.first?.webPage)
+        XCTAssertEqual(store.apps.first?.alerts?.last?.help, "Accept the agreement.")
+        XCTAssertEqual(store.apps.first?.alerts?.last?.webPage?.host, "store.example.com")
         XCTAssertEqual(runner.commands.first?.arguments, ["store"])
     }
 
