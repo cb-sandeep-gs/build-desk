@@ -221,10 +221,11 @@ Known gaps:
   connected and no `.ipa` was at hand.
 - **Uninstall on a real device** was not run, to keep the data of the app on the test device; it was run for real
   on a simulator. The tool reports success when asked to remove an app that is not installed, so Build Desk does too.
-- **A signed release has not been made.** The Developer ID certificate is installed and was verified against a
-  staged copy of the app: it signs with the hardened runtime and a secure timestamp, and `codesign --verify
-  --strict` passes. `spctl` then refuses it as an unnotarized Developer ID, which is the expected answer before
-  notarization. Notarization, stapling and the zip are untried, because the credentials are not saved yet.
+- **A release has been made but not published.** 0.19.2 went through `Scripts/release.sh` for real: signed with
+  the Developer ID (hardened runtime, secure timestamp), accepted by Apple's notary service, stapled and zipped
+  to `dist/BuildDesk-0.19.2.zip` (2.0 MB). Unzipped elsewhere with a download's quarantine flag, Gatekeeper says
+  "accepted, source=Notarized Developer ID", `stapler validate` passes, so it opens on a Mac that is offline, and
+  the app runs from that copy. Nothing is published yet, so teammates still have no link to download.
 - **Device checks for "not trusted" and "Developer Mode off"** are covered by tests on made-up tool output; no
   device in that state was at hand. The lock check was read from a real, unlocked device.
 - **An iOS version newer than the installed Xcode supports** is not detected; the build fails with Xcode's own message.

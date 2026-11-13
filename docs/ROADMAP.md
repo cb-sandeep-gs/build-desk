@@ -15,7 +15,7 @@ file for teams, a release script, run history with a new-warning diff, a build f
 | Build, install, launch, console, uninstall on a simulator | Works; tried on a temporary simulator. |
 | Install last build, install a `.app` file, console on a device | Works; tried on a wired iPhone. |
 | Main window and menu bar popover | Built and checked from rendered images; not yet used by hand. |
-| Signed, notarized release | The certificate is in place and signs correctly (hardened runtime, secure timestamp, valid designated requirement). Not notarized yet: that waits for the credentials. |
+| Signed, notarized release | Works. 0.19.2 was signed with the Developer ID, accepted by Apple's notary service and stapled; unzipped with a download's quarantine flag it is "accepted, source=Notarized Developer ID", its ticket validates offline and it runs. The zip is not published anywhere yet. |
 
 ## 1. Remaining things
 
@@ -26,7 +26,7 @@ Work that finishes what exists. None of it is new functionality.
 | Item | Why it is open | Who |
 |---|---|---|
 | Use the app by hand once | Every screen was checked from images and tests, never by clicking. Press Build and Install, run a pin from the menu bar, see a notification arrive, drop an app file on the window. | Any developer |
-| Make the first signed release | The Developer ID certificate is installed and verified. What is left: `xcrun notarytool store-credentials builddesk-notary`, which needs an Apple ID on the team and an app-specific password, then `./Scripts/release.sh` and publishing the zip as a GitHub release. | Anyone on the team |
+| Publish the first release | 0.19.2 is built, signed and notarized in `dist/`. `./Scripts/release.sh` prints the `gh release create` line that publishes it; publishing puts the app where teammates can download it. | Repository owner |
 | Move the repository to the organisation | It is under a personal account today; a team tool should be where the team already has access. | Repository owner |
 | Check in the project's `.builddesk.json` | The settings file for the first project that uses Build Desk exists but is not committed there. | That project's owner |
 
@@ -58,7 +58,7 @@ Ordered by how much each helps day-to-day work. Sizes are rough: S is a day or t
 | Phase | What it adds | Size | Depends on |
 |---|---|---|---|
 | BD-10 Device tools (rest) | Unified logs in the console | M | Research |
-| BD-11 Distribution (rest) | Check for a newer release and offer to install it; a release workflow on a tagged commit | S | First signed release, and a decision on a dependency |
+| BD-11 Distribution (rest) | Check for a newer release and offer to install it; a release workflow on a tagged commit | S | A published release, and a decision on a dependency |
 
 ### BD-10 Device tools (rest)
 

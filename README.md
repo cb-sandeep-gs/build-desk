@@ -160,7 +160,10 @@ exact command to run if either step is missing. Nothing about the team is writte
 script never asks for or stores a password. Set `BUILDDESK_SIGN_IDENTITY` only when the keychain holds more than
 one Developer ID certificate, and `BUILDDESK_NOTARY_PROFILE` when the credentials were saved under another name.
 
-Until a Developer ID is set up, `./Scripts/release.sh --adhoc` makes a zip that teammates can still use by
+The zip is about 2 MB. A teammate unzips it, moves `BuildDesk.app` to Applications and opens it: because it is
+notarized and stapled, macOS asks nothing, even on a Mac that is offline.
+
+Without a Developer ID, `./Scripts/release.sh --adhoc` makes a zip that teammates can still use by
 clearing its quarantine flag once (the script prints the command), or they can build from source with
 `./Scripts/build-app.sh`.
 
