@@ -67,9 +67,21 @@ mkdir -p "$STAGE"
 # Everyone's Mac, not just this one: the zip holds both Apple Silicon and Intel code.
 BUILDDESK_UNIVERSAL=1 "$ROOT/Scripts/build-app.sh" release "$STAGE"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
-ZIP="$DIST/$APP_NAME-$VERSION.zip"
+# The two kinds of zip never share a name: an ad hoc build must not overwrite, or be taken for, a notarized one.
+if [ "$MODE" = "$ADHOC_FLAG" ]; then
+  ZIP="$DIST/$APP_NAME-$VERSION-adhoc.zip"
+else
+  ZIP="$DIST/$APP_NAME-$VERSION.zip"
+fi
 mkdir -p "$DIST"
 rm -f "$ZIP"
+
+# Every zip here is made to be shared, so none may leave a kind of Mac out.
+ARCHS_BUILT="$(lipo -archs "$APP/Contents/MacOS/$APP_NAME")"
+for arch in arm64 x86_64; do
+  echo "$ARCHS_BUILT" | grep -qw "$arch" \
+    || fail "the build is missing $arch; a shared build must run on every Mac (got: $ARCHS_BUILT)."
+done
 
 # ditto keeps the bundle's signature and extended attributes intact; plain zip does not.
 make_zip() {
@@ -86,11 +98,6 @@ fi
 
 
 # The hardened runtime and a secure timestamp are both required for notarization.
-ARCHS_BUILT="$(lipo -archs "$APP/Contents/MacOS/$APP_NAME")"
-for arch in arm64 x86_64; do
-  echo "$ARCHS_BUILT" | grep -qw "$arch" || fail "the build is missing $arch; a release must run on every Mac (got: $ARCHS_BUILT)."
-done
-
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

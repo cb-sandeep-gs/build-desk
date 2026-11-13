@@ -105,6 +105,16 @@ and dark:
 - The shipped `.app` contains only the binary, the icon and Info.plist: no docs, markdown, scripts, fixtures or
   agent config. The CI workflow counts the files in the bundle; update that count when a real resource is added.
 
+## Releasing
+- One constant sets the version everywhere: `BuildDeskConstants.version`. Bump it first; the bundle, the zip's
+  name and the tag all follow from it.
+- `./Scripts/release.sh` does the rest (universal build, Developer ID signing, notarization, stapling, zip in
+  `dist/`) and prints the publish command. `--adhoc` skips signing. Never pass a signing identity or team id on
+  the command line or write one into this repository: the script reads the certificate from the keychain.
+- A release build is universal (`BUILDDESK_UNIVERSAL=1`); `./Scripts/build-app.sh` on its own builds for this
+  Mac only, which is what local checks should use.
+- Publishing a release is the user's call, and so is every push. The recipe is in the README.
+
 ## Git
 - Conventional Commits (`feat(core): …`), with a short bullet body for key changes.
 - No `Co-Authored-By:` or any other AI/tool attribution trailer.

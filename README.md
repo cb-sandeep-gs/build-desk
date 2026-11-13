@@ -131,43 +131,86 @@ it in. Everyone who opens the project in Build Desk then gets the same setup. Ev
 A file that can't be read, or that has a key Build Desk doesn't know, never stops the project from opening: the
 sidebar shows what is wrong. The format is described in [docs/builddesk.schema.json](docs/builddesk.schema.json).
 
-## Share the app with other Macs
+## Make a release for the team
 
-macOS only opens a downloaded app without complaint when it is signed with a Developer ID and notarized by Apple.
+macOS only opens a downloaded app without complaint when it is signed with a Developer ID and notarized by
+Apple, so sharing a build means making a release.
+
+**1. Set the version.** One constant decides the app's version, the zip's name and the tag:
+
+```bash
+Sources/BuildDeskCore/BuildDeskConstants.swift  →  public static let version = "0.19.4"
+```
+
+**2. Run the release script:**
 
 ```bash
 ./Scripts/release.sh
 ```
 
-This builds, signs, notarizes and zips the app into `dist/BuildDesk-<version>.zip`, and prints the command that
-publishes it as a GitHub release. The app is built inside `dist`, so a release never replaces the copy you are
+It builds for both Apple Silicon and Intel, signs with the Developer ID from the keychain, sends the zip to
+Apple, waits for the answer, staples the ticket to the app and zips it again into
+`dist/BuildDesk-<version>.zip`. It then prints the file's SHA-256 and the command that publishes it. Expect about
+three minutes, most of it waiting on Apple.
+
+Nothing else is needed: the script finds the certificate itself, and checks both it and the notarization
+credentials *before* building, so a missing piece costs seconds instead of a full build. It refuses to ship a
+build that is missing an architecture, and it builds inside `dist`, so a release never replaces the copy you are
 running.
 
-It needs two one-time steps on the Mac that makes releases, both described at the top of
-[Scripts/release.sh](Scripts/release.sh): the team's **Developer ID Application** certificate in the login
-keychain, and notarization credentials saved with
+**3. Publish it.** The script prints this line with the right version filled in:
+
+```bash
+gh release create v0.19.3 "dist/BuildDesk-0.19.3.zip" --title "Build Desk 0.19.3" --notes "..." --target main
+```
+
+Without the GitHub CLI, the [releases page](https://github.com/cb-sandeep-gs/build-desk/releases/new) does the
+same: new tag, target `main`, drag the zip in. Either way the tag must point at code that is pushed, so push
+first.
+
+### One-time setup on the Mac that makes releases
+
+Both steps are described at the top of [Scripts/release.sh](Scripts/release.sh).
+
+1. **The team's "Developer ID Application" certificate** in the login keychain. Only the team's Account Holder
+   can create one. Anyone else makes a request file in Keychain Access (Certificate Assistant ▸ Request a
+   Certificate From a Certificate Authority ▸ Saved to disk), sends it to them and installs the certificate that
+   comes back; the private key never leaves the Mac.
+2. **Notarization credentials**, which need an Apple ID on the team (Admin is enough) and an app-specific
+   password from [account.apple.com](https://account.apple.com):
 
 ```bash
 xcrun notarytool store-credentials builddesk-notary
 ```
 
-Only the team's Account Holder can create the certificate. Anyone else makes a request file in Keychain Access
-(Certificate Assistant ▸ Request a Certificate From a Certificate Authority), sends it to them, and installs the
-certificate they send back; the private key never leaves the Mac.
+Nothing about the team is written into this repository, and the script never asks for or stores a password. Set
+`BUILDDESK_SIGN_IDENTITY` only when the keychain holds more than one Developer ID certificate, and
+`BUILDDESK_NOTARY_PROFILE` when the credentials were saved under another name.
 
-Afterwards `./Scripts/release.sh` needs no arguments: it finds the certificate in the keychain and stops with the
-exact command to run if either step is missing. Nothing about the team is written into this repository, and the
-script never asks for or stores a password. Set `BUILDDESK_SIGN_IDENTITY` only when the keychain holds more than
-one Developer ID certificate, and `BUILDDESK_NOTARY_PROFILE` when the credentials were saved under another name.
+### Without a Developer ID
 
-The zip is about 4 MB and holds both Apple Silicon and Intel code, so it runs on any Mac the app supports. A
-teammate unzips it, moves `BuildDesk.app` to Applications and opens it: because it is notarized and stapled,
-macOS asks nothing, even on a Mac that is offline. They still need macOS 14 or later with Xcode installed, and
-their own Apple account in Xcode for signing.
+```bash
+./Scripts/release.sh --adhoc
+```
 
-Without a Developer ID, `./Scripts/release.sh --adhoc` makes a zip that teammates can still use by
-clearing its quarantine flag once (the script prints the command), or they can build from source with
-`./Scripts/build-app.sh`.
+This writes `dist/BuildDesk-<version>-adhoc.zip` — a name of its own, so it can never be mistaken for a
+notarized release or overwrite one. Teammates can still use it after clearing its quarantine flag once, which
+the script prints. They can also build from source with `./Scripts/build-app.sh`.
+
+### What a teammate needs
+
+The zip is about 4 MB and holds both Apple Silicon and Intel code, so it runs on any Mac the app supports. They
+unzip it, move `BuildDesk.app` to Applications and open it: because it is notarized and stapled, macOS asks
+nothing, even on a Mac that is offline. On their own machine they still need:
+
+- macOS 14 or later, and **Xcode installed** — it never has to be running, and should be closed while a build
+  runs. Signing uses the Apple account already saved in their Xcode.
+- A device paired with that Mac once, trusted, with Developer Mode on. Build Desk says which of these is wrong
+  and how to fix it, but cannot do it for them.
+
+A project is ready for them the moment its `.builddesk.json` is checked in: favourite schemes, hidden schemes and
+the Release tab all appear with no setup. Where that project's release commands read a store, each person needs
+their own credentials for the live parts; until then those parts say so and the rest keeps working.
 
 ## Use the command-line tool
 
