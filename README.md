@@ -140,8 +140,25 @@ macOS only opens a downloaded app without complaint when it is signed with a Dev
 ```
 
 This builds, signs, notarizes and zips the app into `dist/BuildDesk-<version>.zip`, and prints the command that
-publishes it as a GitHub release. It needs one-time setup on the Mac that makes releases; the steps are at the top
-of [Scripts/release.sh](Scripts/release.sh). The script never asks for or stores a password.
+publishes it as a GitHub release. The app is built inside `dist`, so a release never replaces the copy you are
+running.
+
+It needs two one-time steps on the Mac that makes releases, both described at the top of
+[Scripts/release.sh](Scripts/release.sh): the team's **Developer ID Application** certificate in the login
+keychain, and notarization credentials saved with
+
+```bash
+xcrun notarytool store-credentials builddesk-notary
+```
+
+Only the team's Account Holder can create the certificate. Anyone else makes a request file in Keychain Access
+(Certificate Assistant ▸ Request a Certificate From a Certificate Authority), sends it to them, and installs the
+certificate they send back; the private key never leaves the Mac.
+
+Afterwards `./Scripts/release.sh` needs no arguments: it finds the certificate in the keychain and stops with the
+exact command to run if either step is missing. Nothing about the team is written into this repository, and the
+script never asks for or stores a password. Set `BUILDDESK_SIGN_IDENTITY` only when the keychain holds more than
+one Developer ID certificate, and `BUILDDESK_NOTARY_PROFILE` when the credentials were saved under another name.
 
 Until a Developer ID is set up, `./Scripts/release.sh --adhoc` makes a zip that teammates can still use by
 clearing its quarantine flag once (the script prints the command), or they can build from source with

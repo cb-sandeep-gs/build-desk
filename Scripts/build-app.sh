@@ -1,9 +1,11 @@
 #!/bin/bash
-# Builds BuildDesk.app from the SwiftPM executable: ./Scripts/build-app.sh [debug|release]
-# Output: .build/BuildDesk.app (ad-hoc signed for local use; Developer ID signing and notarization come later).
+# Builds BuildDesk.app from the SwiftPM executable: ./Scripts/build-app.sh [debug|release] [output-directory]
+# Output: <output-directory>/BuildDesk.app, by default .build/BuildDesk.app (ad-hoc signed for local use;
+# Scripts/release.sh signs it with a Developer ID elsewhere, so a release never replaces the copy being used).
 set -euo pipefail
 
 CONFIGURATION="${1:-release}"
+OUTPUT_DIR="${2:-}"
 APP_NAME="BuildDesk"
 PRODUCT="BuildDeskApp"
 BUNDLE_ID="com.cricbuzz.builddesk"
@@ -16,7 +18,7 @@ cd "$ROOT"
 swift build -c "$CONFIGURATION" --product "$PRODUCT"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
-APP="$ROOT/.build/$APP_NAME.app"
+APP="${OUTPUT_DIR:-$ROOT/.build}/$APP_NAME.app"
 rm -rf "$APP"
 # Only the binary, the icon and Info.plist go in the bundle: no docs, scripts or fixtures.
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

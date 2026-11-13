@@ -15,7 +15,7 @@ file for teams, a release script, run history with a new-warning diff, a build f
 | Build, install, launch, console, uninstall on a simulator | Works; tried on a temporary simulator. |
 | Install last build, install a `.app` file, console on a device | Works; tried on a wired iPhone. |
 | Main window and menu bar popover | Built and checked from rendered images; not yet used by hand. |
-| Signed, notarized release | Script written; not run, because no Developer ID certificate was available. |
+| Signed, notarized release | The certificate is in place and signs correctly (hardened runtime, secure timestamp, valid designated requirement). Not notarized yet: that waits for the credentials. |
 
 ## 1. Remaining things
 
@@ -26,7 +26,7 @@ Work that finishes what exists. None of it is new functionality.
 | Item | Why it is open | Who |
 |---|---|---|
 | Use the app by hand once | Every screen was checked from images and tests, never by clicking. Press Build and Install, run a pin from the menu bar, see a notification arrive, drop an app file on the window. | Any developer |
-| Make the first signed release | Needs the team's "Developer ID Application" certificate and notarization credentials saved with `xcrun notarytool store-credentials`. Then run `./Scripts/release.sh` and publish the zip as a GitHub release. | Whoever holds the certificate |
+| Make the first signed release | The Developer ID certificate is installed and verified. What is left: `xcrun notarytool store-credentials builddesk-notary`, which needs an Apple ID on the team and an app-specific password, then `./Scripts/release.sh` and publishing the zip as a GitHub release. | Anyone on the team |
 | Move the repository to the organisation | It is under a personal account today; a team tool should be where the team already has access. | Repository owner |
 | Check in the project's `.builddesk.json` | The settings file for the first project that uses Build Desk exists but is not committed there. | That project's owner |
 

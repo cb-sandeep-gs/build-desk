@@ -206,7 +206,7 @@ warning which is fixed and later comes back is not flagged as new.
 |---|---|---|
 | Project settings | `ProjectConfig`, `ProjectConfigLoader` | `.builddesk.json` beside the project or above it up to the repository root: favorite schemes, hidden schemes (with `*`), default scheme and configuration. A broken file is reported in the sidebar and never stops a project from opening. Schema in `docs/builddesk.schema.json`. |
 | Device checks | `DeviceIssue`, `DeviceDiscovery.isLocked` | Each device that can't be used says why (not connected, not trusted, Developer Mode off) with the fix. A locked device is a hint, not a blocker, because the install still works. |
-| Release | `Scripts/release.sh` | Developer ID signing with the hardened runtime, notarization, stapling and a zip in `dist/`; `--adhoc` for a zip without a Developer ID. |
+| Release | `Scripts/release.sh` | Developer ID signing with the hardened runtime, notarization, stapling and a zip in `dist/`; `--adhoc` for a zip without a Developer ID. It finds the certificate in the keychain, checks the notarization credentials before building, and builds inside `dist` so a release never replaces the copy being used. |
 | Closed gaps | — | A scheme named after its test target is listed under Tests. Projects inside workspace groups are found. Simulator versions read correctly for model-specific runtimes. |
 
 Tried on a temporary simulator with the real tools: build, install and launch (259 s), the console, install
@@ -221,8 +221,10 @@ Known gaps:
   connected and no `.ipa` was at hand.
 - **Uninstall on a real device** was not run, to keep the data of the app on the test device; it was run for real
   on a simulator. The tool reports success when asked to remove an app that is not installed, so Build Desk does too.
-- **A signed release has not been made.** `Scripts/release.sh` was run in `--adhoc` mode only; the Mac it was
-  written on has no Developer ID certificate. The signing and notarization steps are untried.
+- **A signed release has not been made.** The Developer ID certificate is installed and was verified against a
+  staged copy of the app: it signs with the hardened runtime and a secure timestamp, and `codesign --verify
+  --strict` passes. `spctl` then refuses it as an unnotarized Developer ID, which is the expected answer before
+  notarization. Notarization, stapling and the zip are untried, because the credentials are not saved yet.
 - **Device checks for "not trusted" and "Developer Mode off"** are covered by tests on made-up tool output; no
   device in that state was at hand. The lock check was read from a real, unlocked device.
 - **An iOS version newer than the installed Xcode supports** is not detected; the build fails with Xcode's own message.
