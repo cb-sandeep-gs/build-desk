@@ -62,6 +62,16 @@ public final class AppModel {
     /// The result of the last clean, or why it was not done, until the next one.
     public internal(set) var buildFolderMessage: String?
 
+    /// The release build being built from its tag and installed; nil when none was started.
+    public internal(set) var taggedInstall: TaggedInstall?
+    /// The copy of the project's code that tagged builds are made from; nil when there is none.
+    public internal(set) var taggedSource: TaggedSource?
+    /// The build folder of that copy, and its whole size.
+    public internal(set) var taggedBuildFolder: BuildFolder?
+    public internal(set) var taggedBuildBytes: Int64?
+    /// The result of removing the copy, or why it was not done.
+    public internal(set) var taggedSourceMessage: String?
+
     // Internal, not private: the model's features are split across files as extensions.
     let environment: AppEnvironment
     let store: PreferenceStore
@@ -119,6 +129,8 @@ public final class AppModel {
             mode = .build
             release = model.snapshot?.releaseProvider.map { ReleaseModel(provider: $0, client: environment.releases) }
             releaseWatch.restart()
+            taggedInstall = nil
+            taggedSourceMessage = nil
             await reloadInsight(for: container)
         } catch {
             openError = userMessage(for: error)

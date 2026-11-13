@@ -55,9 +55,12 @@ public struct ReleaseApp: Sendable, Equatable, Codable, Identifiable {
     /// What is on the store; nil when nothing has been released or it is not known.
     public let store: ReleaseBuild?
     public let commitsSinceStore: Int?
+    /// The Xcode scheme that builds this app; nil when the provider does not say.
+    public let scheme: String?
 
     public init(
-        id: String, name: String, version: String, tracks: [ReleaseTrack], store: ReleaseBuild? = nil, commitsSinceStore: Int? = nil
+        id: String, name: String, version: String, tracks: [ReleaseTrack], store: ReleaseBuild? = nil, commitsSinceStore: Int? = nil,
+        scheme: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -65,6 +68,7 @@ public struct ReleaseApp: Sendable, Equatable, Codable, Identifiable {
         self.tracks = tracks
         self.store = store
         self.commitsSinceStore = commitsSinceStore
+        self.scheme = scheme
     }
 }
 

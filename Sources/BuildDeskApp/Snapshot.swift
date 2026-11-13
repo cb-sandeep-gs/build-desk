@@ -23,6 +23,7 @@ enum Snapshot {
         static let icon = "--icon"
         static let release = "--release"
         static let releaseSheet = "--release-sheet"
+        static let releaseInstall = "--release-install"
     }
 
     /// Time for SwiftUI to lay out and for the first loads to finish before the picture is taken.
@@ -55,6 +56,7 @@ enum Snapshot {
             let scene: Demo.Scene = arguments.contains(Argument.installed) ? .installed
                 : arguments.contains(Argument.tested) ? .tested
                 : arguments.contains(Argument.releaseSheet) ? .releaseAction
+                : arguments.contains(Argument.releaseInstall) ? .taggedInstall
                 : arguments.contains(Argument.release) ? .release : .building
             return await Demo.app(showing: scene)
         }

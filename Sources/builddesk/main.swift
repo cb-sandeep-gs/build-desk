@@ -236,7 +236,8 @@ func release(_ arguments: Arguments) async throws {
     case "status": try await releaseStatus(provider, arguments)
     case "store": try await releaseStore(provider, arguments)
     case "plan": try await releasePlan(provider, arguments)
-    default: throw UsageError(message: "release takes status, store or plan.")
+    case "source": try await releaseSource(provider, container, arguments)
+    default: throw UsageError(message: "release takes status, store, plan or source.")
     }
 }
 
@@ -275,6 +276,21 @@ func releasePlan(_ provider: ReleaseProvider, _ arguments: Arguments) async thro
     plan.steps.enumerated().forEach { print("  \($0.offset + 1). \($0.element)") }
     (plan.warnings ?? []).forEach { print("  warning: \($0)") }
     if let notes = plan.notes { print("\nNotes:\n\(notes)") }
+}
+
+/// `release source <project> --build <id>`: makes the build's code ready in Build Desk's own folder
+/// and prints the project path there, to pass to `builddesk run`. The checkout is not touched.
+func releaseSource(_ provider: ReleaseProvider, _ container: ProjectContainer, _ arguments: Arguments) async throws {
+    let id = try arguments.required(CLI.Option.build)
+    let status = try await ReleaseClient().status(provider)
+    guard let build = status.builds.first(where: { $0.id == id }) else {
+        throw UsageError(message: "The project lists no build named \(id). See `builddesk release status`.")
+    }
+    guard let commit = build.commit else {
+        throw UsageError(message: "The project does not say which commit \(id) was built from.")
+    }
+    let source = try await TaggedCheckout().prepare(commit: commit, of: container)
+    print(source.container.url.path)
 }
 
 /// The commands that fetch something from a device.

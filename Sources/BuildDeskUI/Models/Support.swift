@@ -43,6 +43,8 @@ public struct AppEnvironment: Sendable {
     public let deviceTools: any DeviceToolsProviding
     /// The project's own release commands.
     public let releases: any ReleaseProviding
+    /// The project's code at a tagged commit, to build a release build from.
+    public let taggedSources: any TaggedSourcePreparing
 
     public init(
         reader: any ProjectReading,
@@ -58,7 +60,8 @@ public struct AppEnvironment: Sendable {
         buildFolders: any BuildFolderManaging = InertServices(),
         tester: any TestRunning = InertServices(),
         deviceTools: any DeviceToolsProviding = InertServices(),
-        releases: any ReleaseProviding = InertServices()
+        releases: any ReleaseProviding = InertServices(),
+        taggedSources: any TaggedSourcePreparing = InertServices()
     ) {
         self.reader = reader
         self.discovery = discovery
@@ -74,6 +77,7 @@ public struct AppEnvironment: Sendable {
         self.tester = tester
         self.deviceTools = deviceTools
         self.releases = releases
+        self.taggedSources = taggedSources
     }
 }
 

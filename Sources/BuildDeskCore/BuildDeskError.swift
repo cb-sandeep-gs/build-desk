@@ -24,6 +24,8 @@ public enum BuildDeskError: Error, Equatable, Sendable {
     case releaseCommandMissing(name: String)
     /// The project's release command reported a failure, in its own words.
     case releaseFailed(message: String)
+    /// The project's code at a tagged commit could not be made ready to build.
+    case taggedSourceFailed(message: String)
     /// Install or launch failed after a good build.
     case stepFailed(step: PipelineStep, message: String)
     /// No device matches the name or identifier the caller gave.
@@ -56,6 +58,8 @@ extension BuildDeskError: LocalizedError {
         case .releaseCommandMissing(let name):
             "This project's \(ProjectConfig.fileName) has no release \(name) command."
         case .releaseFailed(let message):
+            message
+        case .taggedSourceFailed(let message):
             message
         case .stepFailed(let step, let message):
             "The \(step.rawValue) step failed. \(message)"

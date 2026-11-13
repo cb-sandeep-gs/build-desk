@@ -1,7 +1,7 @@
 # Build Desk — release integration plan
 
 How a project's release workflow (tags, TestFlight builds, App Store status) becomes a Release mode in Build Desk.
-Written 2026-11-13. Steps R0, R1 and R2 are built, the read-only half of R3, and the menu bar status and notifications of R4; the rest of R3 and R4 are not. The contract itself is described for providers in
+Written 2026-11-13. Steps R0, R1 and R2 are built, the read-only half of R3, and and of R4 the menu bar status, the notifications and installing a tagged build; the rest of R3 and R4 are not. The contract itself is described for providers in
 [release-contract.md](release-contract.md). Roadmap: [ROADMAP.md](ROADMAP.md).
 
 ## The idea
@@ -88,7 +88,7 @@ the action in full ("Create tag and push"). Nothing is run from a preview.
 | R1 Read-only Release mode (done 2026-11-13) | The status view: app switcher, summary cards, builds table, notes and commits per build | Build Desk |
 | R2 Tagging (done 2026-11-13) | New TestFlight build and App Store tag, each with the plan preview and a confirmation | Build Desk |
 | R3 Store (reading done 2026-11-13) | Live cloud build and tester state per build; edit the tester notes; add a build to its tester group | Build Desk, provider |
-| R4 Build Desk extras (menu bar status done 2026-11-13) | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
+| R4 Build Desk extras (menu bar status and tagged install done 2026-11-13) | Checks on a local build, install a tagged build on a device, menu bar status and notifications | Build Desk |
 
 R1 and R2 need no store credentials. R3 shows "not connected" until the person has connected the provider.
 
@@ -158,13 +158,24 @@ be tried without changing a real build.
 | Notifications | `ReleaseChange`, `RunNotice.make(for:appName:)` | Two readings are compared. A cloud build that ended (succeeded or failed) and a build that reached testers are each announced once. The first reading, a reading after "not connected" and a state that did not move announce nothing. Someone looking at Release mode is not told what is already on screen. |
 | Menu bar | `MenuBarReleaseSection`, `ReleaseModel.menuLines` | The popover has a Releases part: one line per app with its version and where its running or newest build stands, the number of alerts, and Open Release, which shows Release mode in the window. |
 | Setting | Settings, "Watch release builds" | On by default; off stops the reading. |
+| Tagged code | `TaggedCheckout`, `TaggedSource` | A copy of the project at a build's commit, under `~/Library/Caches/BuildDesk/TaggedSources`. It is a `git clone --shared` of the person's repository, so it copies no history, and it is moved from commit to commit with `git checkout --force --detach`, so the next build from it is incremental. The person's checkout is only read: no worktree, no fetch, no branch change. |
+| Install a build | `AppModel.installTagged`, `TaggedInstallBanner`, `TaggedInstallButton` | A build's details have Build and Install on the device selected in Build mode. After a confirmation the code is made ready, then the normal run builds, installs and launches it; progress, Stop and the result show at the top of Release mode, and Build mode's last-install line names the build. |
+| Which scheme | `ReleaseApp.scheme` (contract, optional) | The provider can name the scheme that builds each app; without it the scheme selected in Build mode is used. The configuration is the one selected in Build mode. |
+| Disk | `TaggedSourceLine`, `AppModel.removeTaggedSource` | Release mode shows the size of the copy plus its whole build folder (build output and package checkouts) and removes both after a confirmation; never while a build runs or Xcode is open. |
+| Command line | `builddesk release source <project> --build <id>` | Makes the code ready and prints the project path in the copy, to pass to `builddesk run`. |
 
 Tried with the first provider and a real store key: the popover showed both apps with their newest build and its
 testing state after one reading of about eight seconds. A change between two readings was tried with made-up
 data only, because a real one needs a real cloud build.
 
-Not built in R4: checks on a local build (the provider's checks command prints text, not JSON, today) and
-installing a tagged build on a device (it means building a commit other than the checkout).
+Tried for real with the first provider: the copy of the project at a release tag was made in about two seconds
+(about 110 MB; the checkout kept its commit, its branch and had no new worktree). Built from the copy for a new
+simulator, the app compiled from nothing in about 15 minutes, of which several were resolving packages again,
+then installed and launched as the tagged version. The copy's build folder was 4.8 GB of build output plus
+3.8 GB of package checkouts, which is why removing the files deletes that whole folder. Not tried: the button in
+the window by hand, and a real device (installing an older version over the app on a phone can upset its data).
+
+Not built in R4: checks on a local build (the provider's checks command prints text, not JSON, today).
 
 ## The first provider
 

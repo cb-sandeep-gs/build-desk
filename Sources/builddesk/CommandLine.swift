@@ -34,10 +34,11 @@ enum CLI {
         static let track = "--track"
         static let branch = "--branch"
         static let from = "--from"
+        static let build = "--build"
         /// Options that are followed by a value.
         static let withValue: Set<String> = [
             scheme, device, configuration, also, launchArguments, launchEnvironment, launchURL, only, output,
-            action, app, track, branch, from,
+            action, app, track, branch, from, build,
         ]
     }
 
@@ -81,6 +82,7 @@ enum CLI {
       builddesk release status <project> [--json]
       builddesk release store <project> [--json]
       builddesk release plan <project> --action testflight|store --app <id>
+      builddesk release source <project> --build <id>
                              [--track <id>] [--branch <name>] [--from <build>]
 
     <project> is a .xcodeproj or .xcworkspace.
@@ -98,7 +100,9 @@ enum CLI {
     release reads the project's own release commands (the "release" section of its
     .builddesk.json). status shows where each app stands; store shows each build's cloud
     build and testing state; plan shows what an action would do and changes nothing.
-    Running an action is done from the app, after a confirmation.
+    Running an action is done from the app, after a confirmation. source makes a build's
+    code ready in Build Desk's own folder and prints the project path there, to pass to run;
+    your checkout is not touched.
 
     crashes lists the crash logs of an app (named after its process, such as "Sample"), newest
     first, and copies them to the folder given with --output.

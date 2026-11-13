@@ -149,7 +149,7 @@ struct ProjectView: View {
     var body: some View {
         Group {
             if app.mode == .release, let release = app.release {
-                ReleaseView(release: release)
+                ReleaseView(release: release, app: app)
             } else {
                 NavigationSplitView {
                     SchemeListView(project: project)

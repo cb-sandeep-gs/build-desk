@@ -74,6 +74,8 @@ public enum AccessibilityID {
     public static let scheduleToggle = "schedule-toggle"
     public static let releaseWatchToggle = "release-watch-toggle"
     public static let menuBarReleases = "menu-bar-releases"
+    public static let taggedInstall = "tagged-install"
+    public static let taggedInstallButton = "tagged-install-button"
     public static let history = "history"
     public static let cleanButton = "clean-button"
     public static let stopButton = "stop-button"

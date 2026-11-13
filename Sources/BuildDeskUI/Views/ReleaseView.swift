@@ -4,6 +4,9 @@ import SwiftUI
 /// Release mode: where each app stands and its recent builds.
 struct ReleaseView: View {
     @Bindable var release: ReleaseModel
+    let app: AppModel
+    /// The build waiting for its build-and-install confirmation.
+    @State private var pendingInstall: ReleaseBuild?
 
     var body: some View {
         Group {
@@ -38,8 +41,19 @@ struct ReleaseView: View {
                 ReleaseActionSheet(model: action) { Task { await release.endAction() } }
             }
         }
+        .confirmationDialog(
+            "Build and install \(pendingInstall?.version ?? "this build")?",
+            isPresented: Binding(get: { pendingInstall != nil }, set: { isShown in if !isShown { pendingInstall = nil } }),
+            presenting: pendingInstall
+        ) { build in
+            Button("Build and Install") { Task { await app.installTagged(build) } }
+            Button("Cancel", role: .cancel) {}
+        } message: { build in
+            Text(app.taggedInstallSummary(for: build) ?? "")
+        }
         // The first look at Release mode reads the status; later looks keep what is there.
         .task { if release.status == nil { await release.refresh() } }
+        .task { await app.refreshTaggedSource() }
         .accessibilityIdentifier(AccessibilityID.releaseView)
     }
 
@@ -47,12 +61,14 @@ struct ReleaseView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Layout.spacingLarge) {
                 header(status)
+                if let install = app.taggedInstall, app.showsTaggedInstall { TaggedInstallBanner(app: app, install: install) }
                 if let app = release.selectedApp {
                     storeAlerts
                     cards(app)
                     if release.canAct { actions(app) }
                     builds
                 }
+                TaggedSourceLine(app: app)
             }
             .frame(maxWidth: Layout.detailMaxWidth, alignment: .leading)
             .padding(Layout.spacingLarge)
@@ -153,10 +169,11 @@ struct ReleaseView: View {
                         if index > 0 { Divider() }
                         BuildRow(
                             build: build, track: release.trackName(of: build), store: release.storeBuild(for: build),
-                            isOpen: release.selectedBuildID == build.id
-                        ) {
-                            release.selectedBuildID = release.selectedBuildID == build.id ? nil : build.id
-                        }
+                            isOpen: release.selectedBuildID == build.id,
+                            deviceName: app.selectedDevice?.name, installBlocker: app.taggedInstallBlocker(for: build),
+                            install: { pendingInstall = build },
+                            toggle: { release.selectedBuildID = release.selectedBuildID == build.id ? nil : build.id }
+                        )
                     }
                 }
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Layout.cornerRadius))
@@ -209,6 +226,10 @@ private struct BuildRow: View {
     /// The build's live state, when the store is connected and lists it.
     let store: ReleaseStoreBuild?
     let isOpen: Bool
+    /// The device a build-and-install would go to.
+    let deviceName: String?
+    let installBlocker: String?
+    let install: () -> Void
     let toggle: () -> Void
 
     var body: some View {
@@ -230,7 +251,12 @@ private struct BuildRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(build.version), \(track)")
-            if isOpen { details }
+            if isOpen {
+                details
+                TaggedInstallButton(deviceName: deviceName, blocker: installBlocker, action: install)
+                    .padding(.leading, Layout.iconColumnWidth + Layout.spacing)
+                    .padding(.bottom, Layout.spacingSmall)
+            }
         }
         .padding(.horizontal, Layout.spacing)
         .padding(.vertical, Layout.spacingSmall)

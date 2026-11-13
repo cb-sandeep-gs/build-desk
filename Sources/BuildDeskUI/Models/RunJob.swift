@@ -91,7 +91,7 @@ public struct InstallRecord: Codable, Equatable, Sendable {
 /// Services that do nothing. The default for the parts of the environment a test or the demo
 /// does not care about.
 public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateReading, BuildFolderManaging, TestRunning,
-    DeviceToolsProviding, ReleaseProviding {
+    DeviceToolsProviding, ReleaseProviding, TaggedSourcePreparing {
     public init() {}
 
     public func read(_ url: URL) async throws -> AppArtifact {
@@ -110,6 +110,10 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
 
     public func clean(_ folder: BuildFolder) async throws {}
 
+    public func totalBytes(of folder: BuildFolder) async -> Int64? { nil }
+
+    public func removeAll(_ folder: BuildFolder) async throws {}
+
     public func run(_ request: TestRequest) -> AsyncThrowingStream<TestEvent, Error> {
         AsyncThrowingStream { $0.finish() }
     }
@@ -121,6 +125,14 @@ public struct InertServices: ArtifactReading, DeviceAppManaging, SourceStateRead
     public func crashLogs(forProcess processName: String, on device: Device) async throws -> [CrashLog] { [] }
 
     public func copy(_ logs: [CrashLog], from device: Device, to folder: URL) async throws {}
+
+    public func prepare(commit: String, of container: ProjectContainer) async throws -> TaggedSource {
+        throw BuildDeskError.taggedSourceFailed(message: "Building from a tag is not available here.")
+    }
+
+    public func existing(for container: ProjectContainer) async -> TaggedSource? { nil }
+
+    public func remove(_ source: TaggedSource) async throws {}
 
     public func status(_ provider: ReleaseProvider) async throws -> ReleaseStatus {
         ReleaseStatus(head: nil, apps: [], builds: [])

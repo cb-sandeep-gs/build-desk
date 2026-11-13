@@ -46,6 +46,7 @@ Called with no extra arguments when Release mode opens or is refreshed. It shoul
       "id": "shop",
       "name": "Shop",
       "version": "4.2",
+      "scheme": "Shop",
       "tracks": [
         {"id": "internal", "name": "Internal testers", "notes": "generated", "commitsSince": 14,
          "latest": {"id": "ShopInternal-4.2.3", "app": "shop", "track": "internal", "kind": "testflight",
@@ -67,6 +68,7 @@ Called with no extra arguments when Release mode opens or is refreshed. It shoul
 | `head` | The checkout the status was read from. Optional. |
 | `apps` | One entry per app the project ships. |
 | `apps[].version` | The version in the code right now. |
+| `apps[].scheme` | Optional. The Xcode scheme that builds the app. Build Desk uses it to build a tagged version on the person's Mac; without it, the scheme selected in Build mode is used. |
 | `apps[].tracks` | Lines of test builds, such as internal testers and outside partners. |
 | `tracks[].notes` | `generated`: the provider writes a new build's notes. `written`: the person must write them. |
 | `tracks[].latest` | The newest build on the track, or null. |

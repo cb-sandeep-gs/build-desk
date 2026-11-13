@@ -45,7 +45,9 @@ and docs.
 - **Release actions belong to the project.** Build Desk runs the project's own release commands (the release
   contract, `docs/release-contract.md`); it never tags, pushes or talks to a store itself. A provider's `run` is
   called only from a plan the person confirmed, and never to test: check `status` and `plan` only.
-- **Git is read-only.** Build Desk reads the branch and commit of a checkout and never changes it.
+- **Git is read-only in the person's checkout.** Build Desk reads its branch and commit and never changes it: no
+  checkout, no worktree, no fetch. The one place Build Desk runs git commands that change something is its own
+  copy of a project for tagged builds (`TaggedCheckout`, under `~/Library/Caches/BuildDesk/TaggedSources`).
 
 ## Performance and memory
 - **The main thread only draws.** Process runs, file reads and output parsing happen off it; the window must stay
@@ -87,6 +89,7 @@ and dark:
 .build/debug/BuildDeskApp --snapshot prefs.png --settings   # the Settings window
 .build/debug/BuildDeskApp --snapshot rel.png --release      # Release mode
 .build/debug/BuildDeskApp --snapshot act.png --release-sheet  # a release action with its plan
+.build/debug/BuildDeskApp --snapshot tag.png --release-install  # a build being built from its tag
 ```
 
 ## Testing against a real project

@@ -169,6 +169,34 @@ final class BuildFolderTests: XCTestCase {
         try await service.clean(found)
     }
 
+    func testRemoveAllDeletesTheWholeFolderOfOneProjectOnly() async throws {
+        let (folder, container) = try makeDerivedData()
+        defer { folder.remove() }
+        let (service, runner) = service(folder)
+        let found = try await XCTUnwrapAsync(await service.buildFolder(for: container))
+
+        // The whole folder is measured, packages included.
+        let total = await service.totalBytes(of: found)
+        XCTAssertEqual(total, 4_521_984 * 1024)
+        XCTAssertEqual(runner.commands.last?.arguments.last?.hasSuffix("Sample-bbbb"), true)
+
+        try await service.removeAll(found)
+
+        let files = FileManager.default
+        XCTAssertFalse(files.fileExists(atPath: found.url.path))
+        XCTAssertTrue(files.fileExists(atPath: folder.url.appendingPathComponent("Sample-aaaa/info.plist").path))
+        XCTAssertTrue(files.fileExists(atPath: folder.url.appendingPathComponent("ModuleCache.noindex/module").path))
+
+        // A folder that is not one of the build root's own is refused.
+        let outside = BuildFolder(url: folder.url, buildBytes: nil)
+        do {
+            try await service.removeAll(outside)
+            XCTFail("expected a refusal")
+        } catch {
+            XCTAssertTrue(files.fileExists(atPath: folder.url.path))
+        }
+    }
+
     func testCleanRefusesAFolderOutsideDerivedData() async throws {
         let (folder, _) = try makeDerivedData()
         defer { folder.remove() }

@@ -23,6 +23,10 @@ public protocol BuildFolderManaging: Sendable {
     func buildFolder(for container: ProjectContainer) async -> BuildFolder?
     /// Deletes the folder's `Build` subfolder. The caller asks the user first.
     func clean(_ folder: BuildFolder) async throws
+    /// Size of the whole folder: build output, package checkouts and the index.
+    func totalBytes(of folder: BuildFolder) async -> Int64?
+    /// Deletes the whole folder, for a project that itself is being removed. The caller asks the user first.
+    func removeAll(_ folder: BuildFolder) async throws
 }
 
 public struct BuildFolderService: BuildFolderManaging {
@@ -32,8 +36,6 @@ public struct BuildFolderService: BuildFolderManaging {
     private static let xcodeDefaults = "com.apple.dt.Xcode"
     private static let customLocationKey = "IDECustomDerivedDataLocation"
     private static let defaultLocation = "Library/Developer/Xcode/DerivedData"
-    private static let bytesPerKilobyte: Int64 = 1024
-
     private let toolRunner: any ToolRunning
     private let derivedDataRoot: URL
 
@@ -57,12 +59,26 @@ public struct BuildFolderService: BuildFolderManaging {
     }
 
     public func clean(_ folder: BuildFolder) async throws {
-        // Only ever the Build subfolder of a folder this service located itself.
+        try checkOwned(folder)
+        guard FileManager.default.fileExists(atPath: folder.buildURL.path) else { return }
+        try FileManager.default.removeItem(at: folder.buildURL)
+    }
+
+    public func totalBytes(of folder: BuildFolder) async -> Int64? {
+        await size(of: folder.url)
+    }
+
+    public func removeAll(_ folder: BuildFolder) async throws {
+        try checkOwned(folder)
+        guard FileManager.default.fileExists(atPath: folder.url.path) else { return }
+        try FileManager.default.removeItem(at: folder.url)
+    }
+
+    /// Only ever a folder directly inside the build root, as this service locates them.
+    private func checkOwned(_ folder: BuildFolder) throws {
         guard folder.url.deletingLastPathComponent().standardizedFileURL == derivedDataRoot.standardizedFileURL else {
             throw CocoaError(.fileWriteNoPermission)
         }
-        guard FileManager.default.fileExists(atPath: folder.buildURL.path) else { return }
-        try FileManager.default.removeItem(at: folder.buildURL)
     }
 
     /// Xcode names the folder after the project plus a hash, and records the project's path in an
@@ -79,12 +95,22 @@ public struct BuildFolderService: BuildFolderManaging {
         }
     }
 
-    /// `du` measures hundreds of thousands of files far faster than walking them one by one.
     private func size(of folder: URL) async -> Int64? {
+        await DiskUsage.bytes(of: folder, toolRunner: toolRunner)
+    }
+}
+
+/// The size of a folder on disk.
+enum DiskUsage {
+    private static let bytesPerKilobyte: Int64 = 1024
+
+    /// `du` measures hundreds of thousands of files far faster than walking them one by one.
+    /// Nil when the folder is not there or could not be measured.
+    static func bytes(of folder: URL, toolRunner: any ToolRunning) async -> Int64? {
         guard FileManager.default.fileExists(atPath: folder.path),
               let result = try? await toolRunner.run(AppleTools.diskUsage(of: folder)), result.succeeded else { return nil }
         // "4521984<tab>/path": the first field is the size.
         let firstField = String(decoding: result.stdout, as: UTF8.self).split(whereSeparator: \.isWhitespace).first
-        return firstField.flatMap { Int64($0) }.map { $0 * Self.bytesPerKilobyte }
+        return firstField.flatMap { Int64($0) }.map { $0 * bytesPerKilobyte }
     }
 }

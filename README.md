@@ -62,6 +62,12 @@ command and you are connected, each build shows how its cloud build went and whe
 menu bar popover then lists each app with its newest build, and a notification tells you when a cloud build
 ends or a build reaches testers (Settings, **Watch release builds**).
 
+Open a build in the list and press **Build and Install on …** to put that version on the device selected in
+Build mode. Build Desk builds the code of the build's tag on your Mac, from its own copy of the project, with the
+configuration selected in Build mode; your checkout is not touched. It is the tagged code built locally, not the
+file testers got. The first build from a tag is a full one and resolves the packages again; later ones reuse it.
+The line under the list shows how much disk these files take and removes them.
+
 **History.** Each scheme lists its past runs with how long they took, their warnings and the branch and commit
 they were built from, above a build-time trend. After a build, the window names the warnings that no earlier
 build of that scheme had.
@@ -154,6 +160,7 @@ The tool is then at `.build/release/builddesk`.
 | `builddesk release status <project>` | Where each app stands: version, store release and the latest build per track, from the project's own release commands. |
 | `builddesk release store <project>` | Each build's cloud build result, testing state and tester groups. |
 | `builddesk release plan <project> --action testflight\|store --app <id>` | What a release action would do, with its notes. Changes nothing. |
+| `builddesk release source <project> --build <id>` | Makes the build's tagged code ready in Build Desk's own folder and prints the project path there, to pass to `builddesk run`. Your checkout is not touched. |
 | `builddesk test <project> --scheme <name> --device <name-or-udid>` | Runs the scheme's tests and prints the failures. `--only <Bundle[/Class[/test]]>` limits the run. Exits with 2 when tests failed. |
 
 `<project>` is a `.xcodeproj` or `.xcworkspace`. Add `--json` to `schemes`, `targets` and `devices` for

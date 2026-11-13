@@ -3,7 +3,7 @@ import Foundation
 /// Every tool path, file name and limit Build Desk uses, in one place.
 public enum BuildDeskConstants {
     /// The version of the app and the command-line tool. `Scripts/build-app.sh` reads it from here.
-    public static let version = "0.16.0"
+    public static let version = "0.17.0"
 
     /// Absolute paths of the Apple tools Build Desk drives. `xcrun` finds `devicectl` and `simctl`
     /// inside the selected Xcode.
@@ -35,6 +35,16 @@ public enum BuildDeskConstants {
         public static let keptRuns = 20
         /// Lines of a failed tool's output carried in the error shown to the user.
         public static let failureTailLines = 12
+    }
+
+    /// Copies of a project at a tagged commit, kept to build a tagged version.
+    public enum TaggedSources {
+        /// Inside Build Desk's folder in the user's caches.
+        public static let folderName = "TaggedSources"
+        /// Characters of the path hash in a copy's folder name.
+        public static let hashLength = 8
+        /// Characters of a commit hash shown to people.
+        public static let shortCommitLength = 7
     }
 
     /// How often the store is asked for the state of release builds while Build Desk is open.
