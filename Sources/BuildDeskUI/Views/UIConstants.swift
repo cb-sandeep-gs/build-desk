@@ -17,6 +17,9 @@ public enum Layout {
     static let inspectorWidth: CGFloat = 290
     static let tableVersionWidth: CGFloat = 78
     static let tableTrackWidth: CGFloat = 150
+    static let tableTrackMinWidth: CGFloat = 70
+    /// The builds table never gets narrower than this; the window's minimum width follows from it.
+    static let releaseTableMinWidth: CGFloat = 400
     static let welcomeWidth: CGFloat = 420
     public static let menuBarWidth: CGFloat = 330
     public static let sheetWidth: CGFloat = 460

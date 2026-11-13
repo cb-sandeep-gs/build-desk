@@ -69,7 +69,7 @@ struct ReleaseView: View {
                 Divider()
                 ReleaseBuildTable(release: release)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(minWidth: Layout.releaseTableMinWidth, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             if let build = release.selectedBuild {
                 Divider()
                 ReleaseInspector(release: release, app: app, build: build) { pendingInstall = build }
@@ -110,29 +110,48 @@ struct ReleaseView: View {
         }
     }
 
-    /// The filters on the left, the actions on the right. Each action opens a sheet that previews it.
+    /// The filters on the left, the actions on the right; on two rows when one is too narrow, as
+    /// with the inspector open in a small window.
     private func filterBar(_ selected: ReleaseApp) -> some View {
-        HStack(spacing: Layout.spacing) {
-            if release.filters.count > 1 {
-                Picker("Show", selection: $release.filter) {
-                    ForEach(release.filters, id: \.self) { Text(release.title(of: $0)).tag($0) }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Layout.spacing) {
+                filterPicker.fixedSize()
+                Spacer()
+                actionButtons(selected)
+            }
+            VStack(alignment: .leading, spacing: Layout.spacingSmall) {
+                HStack(spacing: Layout.spacing) {
+                    actionButtons(selected)
+                    Spacer()
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                filterPicker
+            }
+        }
+    }
+
+    @ViewBuilder private var filterPicker: some View {
+        if release.filters.count > 1 {
+            Picker("Show", selection: $release.filter) {
+                ForEach(release.filters, id: \.self) { Text(release.title(of: $0)).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+    }
+
+    /// Each action opens a sheet that previews it; nothing is done from here.
+    @ViewBuilder
+    private func actionButtons(_ selected: ReleaseApp) -> some View {
+        if release.canAct {
+            Button("Store Release…", systemImage: "bag") { release.begin(.store) }
                 .fixedSize()
-            }
-            Spacer()
-            if release.canAct {
-                Button("Store Release…", systemImage: "bag") { release.begin(.store) }
-                    .fixedSize()
-                    .disabled(!release.builds.contains { $0.kind == .testflight })
-                    .help("Mark the test build that was shipped as the store release")
-                Button("New Build…", systemImage: "plus") { release.begin(.testflight) }
-                    .buttonStyle(.borderedProminent)
-                    .fixedSize()
-                    .disabled(selected.tracks.isEmpty)
-                    .accessibilityIdentifier(AccessibilityID.newTestBuild)
-            }
+                .disabled(!release.builds.contains { $0.kind == .testflight })
+                .help("Mark the test build that was shipped as the store release")
+            Button("New Build…", systemImage: "plus") { release.begin(.testflight) }
+                .buttonStyle(.borderedProminent)
+                .fixedSize()
+                .disabled(selected.tracks.isEmpty)
+                .accessibilityIdentifier(AccessibilityID.newTestBuild)
         }
     }
 
@@ -253,13 +272,16 @@ private struct ReleaseBuildRow: View {
                 Text(build.version).monospacedDigit().fontWeight(isSelected ? .semibold : .regular)
                     .frame(width: Layout.tableVersionWidth, alignment: .leading)
                 Text(track).foregroundStyle(.secondary).lineLimit(1)
-                    .frame(width: Layout.tableTrackWidth, alignment: .leading)
+                    .frame(
+                        minWidth: Layout.tableTrackMinWidth, idealWidth: Layout.tableTrackWidth, maxWidth: Layout.tableTrackWidth,
+                        alignment: .leading
+                    )
                 mark
                 Text(state).foregroundStyle(store?.cloudState == .failed ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary)).lineLimit(1)
-                Spacer()
+                Spacer(minLength: 0)
                 if let date = build.date {
                     Text(Date(timeIntervalSince1970: date).formatted(.relative(presentation: .named)))
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary).lineLimit(1).fixedSize()
                 }
             }
             .padding(.horizontal, Layout.spacingLarge)
